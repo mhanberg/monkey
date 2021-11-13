@@ -29,7 +29,7 @@ fn isDigit(ch: u8) bool {
     return '0' <= ch and ch <= '9';
 }
 
-const Lexer = struct {
+pub const Lexer = struct {
     input: []const u8,
     position: u32 = 0,
     read_position: u32 = 0,
