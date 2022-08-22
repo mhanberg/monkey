@@ -44,7 +44,7 @@ defmodule Monkey.Lexer do
 
   defguardp is_digit(char) when char in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
 
-  @spec next_token(t()) :: Token.t()
+  @spec next_token(t()) :: {t(), Token.t()}
   def next_token(%__MODULE__{} = lexer) do
     lexer = skip_whitespace(lexer)
 
