@@ -55,12 +55,12 @@ test "let statements" {
     for (tests) |t, i| {
         const statement = prog.?.statements[i];
 
-        try expect(testLetStatement(statement, t.expected_identifier));
+        try expect(try testLetStatement(statement, t.expected_identifier));
     }
 }
 
-fn testLetStatement(s: ast.Statement, name: []const u8) bool {
-  try std.testing.expectEqual(s.tokenLiteral(), "let");
+fn testLetStatement(s: ast.Statement, _: []const u8) !bool {
+    try std.testing.expectEqual(s.tokenLiteral(), "let");
 
-
+    return true;
 }

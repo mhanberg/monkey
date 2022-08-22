@@ -16,45 +16,37 @@ const token = @import("./token.zig");
 const Node = struct {
     impl: *c_void,
 
-    // can call directly: iface.tokenLiteralFn(iface)
-    tokenLiteralFn: fn (*Node) i32,
+    tokenLiteralFn: fn (*Node) []const u8,
 
-    // allows calling: iface.tokenLiteral()
-    pub fn tokenLiteral(iface: *const Node) i32 {
+    pub fn tokenLiteral(iface: *const Node) []const u8 {
         return iface.tokenLiteralFn(iface.impl);
     }
 };
 
 pub const Statement = struct {
     impl: *c_void,
-    // can call directly: iface.tokenLiteralFn(iface)
-    tokenLiteralFn: fn (*Statement) i32,
-    // can call directly: iface.tokenLiteralFn(iface)
-    statementNodeFn: fn (*Statement) i32,
+    tokenLiteralFn: fn (*Statement) []const u8,
+    statementNodeFn: fn (*Statement) void,
 
-    pub fn tokenLiteral(iface: *const Statement) i32 {
+    pub fn tokenLiteral(iface: *const Statement) []const u8 {
         return iface.tokenLiteralFn(iface.impl);
     }
 
-    pub fn statementNode(iface: *const Statement) i32 {
+    pub fn statementNode(iface: *const Statement) void {
         return iface.statementNodeFn(iface.impl);
     }
 };
 
 const Expression = struct {
     impl: *c_void,
-    // can call directly: iface.tokenLiteralFn(iface)
-    tokenLiteralFn: fn (*Expression) i32,
-    // can call directly: iface.tokenLiteralFn(iface)
-    expressionNodeFn: fn (*Expression) i32,
+    tokenLiteralFn: fn (*Expression) []const u8,
+    expressionNodeFn: fn (*Expression) []const u8,
 
-    // allows calling: iface.tokenLiteral()
-    pub fn tokenLiteral(iface: *const Expression) i32 {
+    pub fn tokenLiteral(iface: *const Expression) []const u8 {
         return iface.tokenLiteralFn(iface.impl);
     }
 
-    // allows calling: iface.expressionNode()
-    pub fn expressionNode(iface: *const Expression) i32 {
+    pub fn expressionNode(iface: *const Expression) void {
         return iface.expressionNodeFn(iface.impl);
     }
 };
