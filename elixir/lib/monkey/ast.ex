@@ -43,6 +43,22 @@ defmodule Monkey.Ast do
     end
   end
 
+  defmodule ReturnStatement do
+    defstruct [:token, :return_value]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(return_statement) do
+        return_statement.token.literal
+      end
+    end
+
+    defimpl Monkey.Ast.Statement do
+      def statement_node(_let_statement) do
+        nil
+      end
+    end
+  end
+
   defmodule Identifier do
     defstruct [:token, :value]
 

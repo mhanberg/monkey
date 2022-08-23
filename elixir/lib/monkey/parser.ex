@@ -63,6 +63,9 @@ defmodule Monkey.Parser do
       @token_let ->
         parse_let_statement(parser)
 
+      @token_return ->
+        parse_return_statement(parser)
+
       _ ->
         {parser, nil}
     end
@@ -94,6 +97,17 @@ defmodule Monkey.Parser do
       {:error, parser} ->
         {parser, nil}
     end
+  end
+
+  defp parse_return_statement(%__MODULE__{} = parser) do
+    statement = %Ast.ReturnStatement{token: parser.current_token}
+
+    parser =
+      parser
+      |> next_token()
+      |> eat_until_semicolon()
+
+    {parser, statement}
   end
 
   defp eat_until_semicolon(%Parser{current_token: current_token} = parser)

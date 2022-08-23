@@ -3,6 +3,7 @@ defmodule Monkey.ParserTest do
 
   alias Monkey.Lexer
   alias Monkey.Parser
+  alias Monkey.Ast
 
   test "let statements" do
     input = """
@@ -31,10 +32,34 @@ defmodule Monkey.ParserTest do
     for {{expected_identifier}, idx} <- Enum.with_index(tests) do
       statement = Enum.at(program.statements, idx)
 
-      assert Monkey.Ast.Node.token_literal(statement) == "let"
-      assert %Monkey.Ast.LetStatement{} = statement
+      assert Ast.Node.token_literal(statement) == "let"
+      assert %Ast.LetStatement{} = statement
       assert statement.name.value == expected_identifier
-      assert Monkey.Ast.Node.token_literal(statement.name) == expected_identifier
+      assert Ast.Node.token_literal(statement.name) == expected_identifier
+    end
+  end
+
+  test "return statements" do
+    input = """
+    return 5;
+    return 10;
+    return 993322;
+    """
+
+    lexer = Lexer.new(input)
+
+    parser = Parser.new(lexer)
+
+    {parser, program} = Parser.parse_program(parser)
+
+    assert_parse_errors(parser)
+
+    assert program
+    assert 3 == length(program.statements)
+
+    for statement <- program.statements do
+      assert %Ast.ReturnStatement{} = statement
+      assert "return" == Ast.Node.token_literal(statement)
     end
   end
 
