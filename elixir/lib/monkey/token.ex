@@ -67,6 +67,10 @@ defmodule Monkey.Token do
     @tokens
   end
 
+  def tokens(key) do
+    @tokens[key]
+  end
+
   def lookup_identifier(identifier) do
     Map.get(@keywords, identifier, @tokens.ident)
   end

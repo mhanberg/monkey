@@ -1,6 +1,7 @@
 defmodule Monkey.Ast do
   defprotocol Node do
     def token_literal(node)
+    def string(node)
   end
 
   defprotocol Statement do
@@ -24,6 +25,12 @@ defmodule Monkey.Ast do
           ""
         end
       end
+
+      def string(%Monkey.Ast.Program{statements: statements}) do
+        for s <- statements, into: "" do
+          Monkey.Ast.Node.string(s)
+        end
+      end
     end
   end
 
@@ -33,6 +40,19 @@ defmodule Monkey.Ast do
     defimpl Monkey.Ast.Node do
       def token_literal(let_statement) do
         let_statement.token.literal
+      end
+
+      def string(%Monkey.Ast.LetStatement{} = ls) do
+        str = "#{Monkey.Ast.Node.token_literal(ls)} #{Monkey.Ast.Node.string(ls.name)} = "
+
+        str =
+          if ls.value != nil do
+            str <> Monkey.Ast.Node.string(ls.value)
+          else
+            str
+          end
+
+        str <> ";"
       end
     end
 
@@ -50,10 +70,47 @@ defmodule Monkey.Ast do
       def token_literal(return_statement) do
         return_statement.token.literal
       end
+
+      def string(%Monkey.Ast.ReturnStatement{} = rs) do
+        str = "#{Monkey.Ast.Node.token_literal(rs)} "
+
+        str =
+          if rs.return_value != nil do
+            str <> Monkey.Ast.Node.string(rs.return_value)
+          else
+            str
+          end
+
+        str <> ";"
+      end
     end
 
     defimpl Monkey.Ast.Statement do
-      def statement_node(_let_statement) do
+      def statement_node(_return_statement) do
+        nil
+      end
+    end
+  end
+
+  defmodule ExpressionStatement do
+    defstruct [:token, :expression]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(expression_statement) do
+        expression_statement.token.literal
+      end
+
+      def string(%Monkey.Ast.ExpressionStatement{} = expression_statement) do
+        if expression_statement.expression != nil do
+          Monkey.Ast.Node.string(expression_statement.expression)
+        else
+          ""
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Statement do
+      def statement_node(_expression_statement) do
         nil
       end
     end
@@ -65,6 +122,10 @@ defmodule Monkey.Ast do
     defimpl Monkey.Ast.Node do
       def token_literal(identifier) do
         identifier.token.literal
+      end
+
+      def string(identifier) do
+        identifier.value
       end
     end
 
