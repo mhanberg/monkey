@@ -15,7 +15,9 @@ defmodule Monkey.ParserTest do
 
     parser = Parser.new(lexer)
 
-    {_, program} = Parser.parse_program(parser)
+    {parser, program} = Parser.parse_program(parser)
+
+    assert_parse_errors(parser)
 
     assert program
     assert 3 == length(program.statements)
@@ -34,5 +36,9 @@ defmodule Monkey.ParserTest do
       assert statement.name.value == expected_identifier
       assert Monkey.Ast.Node.token_literal(statement.name) == expected_identifier
     end
+  end
+
+  defp assert_parse_errors(parser) do
+    assert length(parser.errors) == 0, Enum.join(parser.errors, "\n")
   end
 end

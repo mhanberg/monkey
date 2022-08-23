@@ -8,7 +8,7 @@ defmodule Monkey.Parser do
     Module.put_attribute(__MODULE__, :"token_#{k}", v)
   end
 
-  defstruct [:lexer, :current_token, :peek_token]
+  defstruct [:lexer, :current_token, :peek_token, errors: []]
 
   def new(%Lexer{} = lexer) do
     %__MODULE__{lexer: lexer} |> next_token() |> next_token()
@@ -87,11 +87,11 @@ defmodule Monkey.Parser do
 
             {parser, statement}
 
-          _ ->
+          {:error, parser} ->
             {parser, nil}
         end
 
-      _ ->
+      {:error, parser} ->
         {parser, nil}
     end
   end
@@ -114,7 +114,14 @@ defmodule Monkey.Parser do
       parser = next_token(parser)
       {:ok, parser}
     else
+      parser = peek_error(parser, token_type)
       {:error, parser}
     end
+  end
+
+  def peek_error(%__MODULE__{} = parser, token_type) do
+    message = "expected next token to be #{token_type}, got #{parser.peek_token.type} instead"
+
+    %{parser | errors: [message | parser.errors]}
   end
 end
