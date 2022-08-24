@@ -166,7 +166,11 @@ defmodule Monkey.ParserTest do
       {"(5 + 5) * 2", "((5 + 5) * 2)"},
       {"2 / (5 + 5)", "(2 / (5 + 5))"},
       {"(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"},
-      {"-(5 + 5)", "(-(5 + 5))"}
+      {"-(5 + 5)", "(-(5 + 5))"},
+      {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
+      {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+       "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+      {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"}
     ]
 
     for {input, expected} <- tests do
@@ -303,6 +307,34 @@ defmodule Monkey.ParserTest do
         assert e == p.token.literal
       end
     end
+  end
+
+  @tag input: "add(1, 2 * 3, 4 + 5);"
+  test "parsing call experssions", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.CallExpression{
+                 function: %Ast.Identifier{value: "add"},
+                 arguments: [
+                   %Ast.IntegerLiteral{value: 1},
+                   %Ast.InfixExpression{
+                     left: %Ast.IntegerLiteral{value: 2},
+                     operator: "*",
+                     right: %Ast.IntegerLiteral{value: 3}
+                   },
+                   %Ast.InfixExpression{
+                     left: %Ast.IntegerLiteral{value: 4},
+                     operator: "+",
+                     right: %Ast.IntegerLiteral{value: 5}
+                   }
+                 ]
+               }
+             }
+           ] = program.statements
   end
 
   defp assert_parse_errors(parser) do

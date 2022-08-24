@@ -286,13 +286,41 @@ defmodule Monkey.Ast do
       def string(node) do
         parameters =
           Enum.join(
-            for p <- node.parameters, into: "" do
+            for p <- node.parameters do
               Monkey.Ast.Node.string(p)
             end,
             ", "
           )
 
-        "#{Monkey.Ast.Node.token_literal(node)}(#{parameters})#{Monkey.Ast.Node.string(node.body)}"
+        "#{Monkey.Ast.Node.string(node)}(#{parameters})#{Monkey.Ast.Node.string(node.body)}"
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule CallExpression do
+    defstruct [:token, :function, arguments: []]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        arguments =
+          Enum.join(
+            for p <- node.arguments do
+              Monkey.Ast.Node.string(p)
+            end,
+            ", "
+          )
+
+        "#{Monkey.Ast.Node.string(node.function)}(#{arguments})"
       end
     end
 

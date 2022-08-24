@@ -24,7 +24,8 @@ defmodule Monkey.Parser do
     @token_plus => @sum,
     @token_minus => @sum,
     @token_slash => @product,
-    @token_asterisk => @product
+    @token_asterisk => @product,
+    @token_lparen => @call
   }
 
   @type prefix_parse_function :: (t() -> map())
@@ -73,7 +74,8 @@ defmodule Monkey.Parser do
         @token_plus => &parse_infix_expression/2,
         @token_minus => &parse_infix_expression/2,
         @token_slash => &parse_infix_expression/2,
-        @token_asterisk => &parse_infix_expression/2
+        @token_asterisk => &parse_infix_expression/2,
+        @token_lparen => &parse_call_expression/2
       }
     }
     |> next_token()
@@ -446,6 +448,48 @@ defmodule Monkey.Parser do
       case expect_peek(parser, @token_rparen) do
         {:ok, parser} ->
           {parser, identifiers}
+
+        {:error, parser} ->
+          {parser, nil}
+      end
+    end
+  end
+
+  def parse_call_expression(%__MODULE__{} = parser, expression) do
+    expression = %Ast.CallExpression{token: parser.current_token, function: expression}
+
+    {parser, call_args} = parse_call_arguments(parser)
+
+    {parser, %{expression | arguments: call_args}}
+  end
+
+  defp parse_call_arguments(%__MODULE__{} = parser) do
+    args = []
+
+    if is_peek_token?(parser, @token_rparen) do
+      parser = next_token(parser)
+
+      {parser, args}
+    else
+      parser = next_token(parser)
+      {parser, expression} = parse_expression(parser, @lowest)
+      args = args ++ [expression]
+
+      {parser, args} =
+        while(
+          {parser, args},
+          fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
+          fn {parser, args} ->
+            parser = parser |> next_token() |> next_token()
+
+            {parser, expression} = parse_expression(parser, @lowest)
+            {parser, args ++ [expression]}
+          end
+        )
+
+      case expect_peek(parser, @token_rparen) do
+        {:ok, parser} ->
+          {parser, args}
 
         {:error, parser} ->
           {parser, nil}
