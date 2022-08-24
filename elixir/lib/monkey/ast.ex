@@ -225,4 +225,63 @@ defmodule Monkey.Ast do
       ""
     end
   end
+
+  defmodule IfExpression do
+    defstruct [:token, :condition, :consequence, :alternative]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        string =
+          "if#{Monkey.Ast.Node.string(node.condition)} #{Monkey.Ast.Node.string(node.consequence)}"
+
+        if node.alternative do
+          string <> "else #{Monkey.Ast.Node.string(node.alternative)}"
+        else
+          string
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule BlockStatement do
+    defstruct [:token, :statements]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        for s <- node.statements, into: "" do
+          Monkey.Ast.Node.string(s)
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defimpl Monkey.Ast.Node, for: Atom do
+    def token_literal(_node) do
+      ""
+    end
+
+    def string(_node) do
+      ""
+    end
+  end
 end

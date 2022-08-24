@@ -180,6 +180,72 @@ defmodule Monkey.ParserTest do
     end
   end
 
+  @tag input: "if (x < y) { x }"
+  test "if experssion", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.IfExpression{
+                 condition: %Ast.InfixExpression{
+                   operator: "<",
+                   left: %Ast.Identifier{value: "x"},
+                   right: %Ast.Identifier{value: "y"}
+                 },
+                 consequence: %Ast.BlockStatement{
+                   statements: [
+                     %Ast.ExpressionStatement{
+                       expression: %Ast.Identifier{
+                         value: "x"
+                       }
+                     }
+                   ]
+                 },
+                 alternative: nil
+               }
+             }
+           ] = program.statements
+  end
+
+  @tag input: "if (x < y) { x } else { y }"
+  test "if else experssion", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.IfExpression{
+                 condition: %Ast.InfixExpression{
+                   operator: "<",
+                   left: %Ast.Identifier{value: "x"},
+                   right: %Ast.Identifier{value: "y"}
+                 },
+                 consequence: %Ast.BlockStatement{
+                   statements: [
+                     %Ast.ExpressionStatement{
+                       expression: %Ast.Identifier{
+                         value: "x"
+                       }
+                     }
+                   ]
+                 },
+                 alternative: %Ast.BlockStatement{
+                   statements: [
+                     %Ast.ExpressionStatement{
+                       expression: %Ast.Identifier{
+                         value: "y"
+                       }
+                     }
+                   ]
+                 }
+               }
+             }
+           ] = program.statements
+  end
+
   defp assert_parse_errors(parser) do
     assert length(parser.errors) == 0, Enum.join(parser.errors, "\n")
   end

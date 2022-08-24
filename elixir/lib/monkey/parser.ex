@@ -61,7 +61,8 @@ defmodule Monkey.Parser do
         @token_minus => &parse_prefix_expression/1,
         @token_true => &parse_boolean/1,
         @token_false => &parse_boolean/1,
-        @token_lparen => &parse_grouped_expression/1
+        @token_lparen => &parse_grouped_expression/1,
+        @token_if => &parse_if_expression/1
       },
       infix_parse_functions: %{
         @token_eq => &parse_infix_expression/2,
@@ -96,7 +97,11 @@ defmodule Monkey.Parser do
 
     parser = next_token(parser)
 
-    {parser, %{program | statements: Enum.reverse(program.statements)}}
+    {%{parser | errors: Enum.reverse(parser.errors)},
+     %{
+       program
+       | statements: Enum.reverse(program.statements)
+     }}
   end
 
   defp parse_program_statement(
@@ -206,30 +211,23 @@ defmodule Monkey.Parser do
     else
       {parser, left_expression} = prefix.(parser)
 
-      Stream.resource(
-        fn -> {parser, left_expression, true} end,
-        fn {parser, left_expression, continue?} = acc ->
-          if continue? && !is_peek_token?(parser, @token_semicolon) &&
-               precedence < peek_precedence(parser) do
-            infix = parser.infix_parse_functions[parser.peek_token.type]
-
-            if infix == nil do
-              {[acc], {parser, left_expression, false}}
-            else
-              parser = next_token(parser)
-
-              {parser, left_expression} = infix.(parser, left_expression)
-
-              {[{parser, left_expression}], {parser, left_expression, true}}
-            end
-          else
-            {:halt, acc}
-          end
+      while(
+        {parser, left_expression},
+        fn {parser, _} ->
+          !is_peek_token?(parser, @token_semicolon) && precedence < peek_precedence(parser)
         end,
-        fn acc -> acc end
+        fn {parser, left_expression} ->
+          infix = parser.infix_parse_functions[parser.peek_token.type]
+
+          if infix == nil do
+            {parser, left_expression}
+          else
+            parser = next_token(parser)
+
+            infix.(parser, left_expression)
+          end
+        end
       )
-      |> Enum.to_list()
-      |> List.last({parser, left_expression})
     end
   end
 
@@ -248,6 +246,7 @@ defmodule Monkey.Parser do
     peek_token.type == token_type
   end
 
+  @spec expect_peek(t(), Token.token_type()) :: {:ok, t()} | {:error, t()}
   defp expect_peek(parser, token_type) do
     if is_peek_token?(parser, token_type) do
       parser = next_token(parser)
@@ -322,6 +321,76 @@ defmodule Monkey.Parser do
     end
   end
 
+  defp parse_if_expression(%__MODULE__{} = parser) do
+    expression = %Ast.IfExpression{token: parser.current_token}
+
+    case expect_peek(parser, @token_lparen) do
+      {:error, parser} ->
+        {parser, nil}
+
+      {:ok, parser} ->
+        parser = next_token(parser)
+
+        {parser, condition} = parse_expression(parser, @lowest)
+
+        with {:ok, parser} <- expect_peek(parser, @token_rparen),
+             {:ok, parser} <- expect_peek(parser, @token_lbrace) do
+          {parser, consequence} = parse_block_statement(parser)
+
+          {parser, alternative} =
+            if is_peek_token?(parser, @token_else) do
+              parser = next_token(parser)
+
+              case expect_peek(parser, @token_lbrace) do
+                {:ok, parser} ->
+                  parse_block_statement(parser)
+
+                {:error, parser} ->
+                  {parser, nil}
+              end
+            else
+              {parser, nil}
+            end
+
+          {parser,
+           %{
+             expression
+             | condition: condition,
+               consequence: consequence,
+               alternative: alternative
+           }}
+        else
+          {:error, parser} ->
+            {parser, nil}
+        end
+    end
+  end
+
+  defp parse_block_statement(%__MODULE__{} = parser) do
+    block = %Ast.BlockStatement{token: parser.current_token, statements: []}
+
+    parser = next_token(parser)
+
+    while(
+      {parser, block},
+      fn {parser, _} ->
+        parser.current_token.type != @token_rbrace && parser.current_token.type != @token_eof
+      end,
+      fn {parser, block} ->
+        {parser, statement} = parse_statement(parser)
+
+        block =
+          if statement do
+            %{block | statements: block.statements ++ [statement]}
+          else
+            block
+          end
+
+        {next_token(parser), block}
+      end
+    )
+  end
+
   def peek_error(%__MODULE__{} = parser, token_type) do
     put_parser_error(
       parser,
@@ -339,5 +408,15 @@ defmodule Monkey.Parser do
 
   defp put_parser_error(parser, message) do
     %{parser | errors: [message | parser.errors]}
+  end
+
+  defp while(acc, predicate, body) do
+    if predicate.(acc) do
+      acc = body.(acc)
+
+      while(acc, predicate, body)
+    else
+      acc
+    end
   end
 end
