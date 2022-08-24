@@ -275,6 +275,34 @@ defmodule Monkey.Ast do
     end
   end
 
+  defmodule FunctionLiteral do
+    defstruct [:token, :parameters, :body]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        parameters =
+          Enum.join(
+            for p <- node.parameters, into: "" do
+              Monkey.Ast.Node.string(p)
+            end,
+            ", "
+          )
+
+        "#{Monkey.Ast.Node.token_literal(node)}(#{parameters})#{Monkey.Ast.Node.string(node.body)}"
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
   defimpl Monkey.Ast.Node, for: Atom do
     def token_literal(_node) do
       ""

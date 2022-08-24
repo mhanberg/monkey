@@ -246,6 +246,65 @@ defmodule Monkey.ParserTest do
            ] = program.statements
   end
 
+  @tag input: "fn(x, y) { x + y; }"
+  test "function literal", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.FunctionLiteral{
+                 parameters: [
+                   %Ast.Identifier{value: "x"},
+                   %Ast.Identifier{value: "y"}
+                 ],
+                 body: %Ast.BlockStatement{
+                   statements: [
+                     %Ast.ExpressionStatement{
+                       expression: %Ast.InfixExpression{
+                         left: %Ast.Identifier{value: "x"},
+                         operator: "+",
+                         right: %Ast.Identifier{value: "y"}
+                       }
+                     }
+                   ]
+                 }
+               }
+             }
+           ] = program.statements
+  end
+
+  test "function parameter parsing" do
+    tests = [
+      {"fn() {};", []},
+      {"fn(x) {};", ["x"]},
+      {"fn(x, y, z) {};", ["x", "y", "z"]}
+    ]
+
+    for {input, expected} <- tests do
+      context = lex_and_parse(%{input: input})
+      parser = context[:parser]
+      program = context[:program]
+
+      assert_parse_errors(parser)
+
+      assert [
+               %Ast.ExpressionStatement{
+                 expression: %Ast.FunctionLiteral{
+                   parameters: parameters
+                 }
+               }
+             ] = program.statements
+
+      assert length(expected) == length(parameters)
+
+      for {e, p} <- Enum.zip(expected, parameters) do
+        assert e == p.token.literal
+      end
+    end
+  end
+
   defp assert_parse_errors(parser) do
     assert length(parser.errors) == 0, Enum.join(parser.errors, "\n")
   end

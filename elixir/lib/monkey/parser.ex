@@ -62,7 +62,8 @@ defmodule Monkey.Parser do
         @token_true => &parse_boolean/1,
         @token_false => &parse_boolean/1,
         @token_lparen => &parse_grouped_expression/1,
-        @token_if => &parse_if_expression/1
+        @token_if => &parse_if_expression/1,
+        @token_function => &parse_function_literal/1
       },
       infix_parse_functions: %{
         @token_eq => &parse_infix_expression/2,
@@ -389,6 +390,67 @@ defmodule Monkey.Parser do
         {next_token(parser), block}
       end
     )
+  end
+
+  defp parse_function_literal(%__MODULE__{} = parser) do
+    function = %Ast.FunctionLiteral{token: parser.current_token}
+
+    case expect_peek(parser, @token_lparen) do
+      {:ok, parser} ->
+        {parser, parameters} = parse_function_parameters(parser)
+
+        case expect_peek(parser, @token_lbrace) do
+          {:ok, parser} ->
+            {parser, body} = parse_block_statement(parser)
+
+            {parser, %{function | parameters: parameters, body: body}}
+
+          {:error, parser} ->
+            {parser, nil}
+        end
+
+      {:error, parser} ->
+        {parser, nil}
+    end
+  end
+
+  defp parse_function_parameters(%__MODULE__{} = parser) do
+    identifiers = []
+
+    if is_peek_token?(parser, @token_rparen) do
+      parser = next_token(parser)
+
+      {parser, identifiers}
+    else
+      parser = next_token(parser)
+
+      ident = %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}
+      identifiers = identifiers ++ [ident]
+
+      {parser, identifiers} =
+        while(
+          {parser, identifiers},
+          fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
+          fn {parser, identifiers} ->
+            parser = parser |> next_token() |> next_token()
+
+            ident = %Ast.Identifier{
+              token: parser.current_token,
+              value: parser.current_token.literal
+            }
+
+            {parser, identifiers ++ [ident]}
+          end
+        )
+
+      case expect_peek(parser, @token_rparen) do
+        {:ok, parser} ->
+          {parser, identifiers}
+
+        {:error, parser} ->
+          {parser, nil}
+      end
+    end
   end
 
   def peek_error(%__MODULE__{} = parser, token_type) do
