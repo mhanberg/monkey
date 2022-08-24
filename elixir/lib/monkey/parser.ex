@@ -158,9 +158,12 @@ defmodule Monkey.Parser do
 
         case expect_peek(parser, @token_assign) do
           {:ok, parser} ->
+            parser = next_token(parser)
+
+            {parser, value} = parse_expression(parser, @lowest)
             parser = eat_until_semicolon(parser)
 
-            {parser, statement}
+            {parser, %{statement | value: value}}
 
           {:error, parser} ->
             {parser, nil}
@@ -174,12 +177,13 @@ defmodule Monkey.Parser do
   defp parse_return_statement(%__MODULE__{} = parser) do
     statement = %Ast.ReturnStatement{token: parser.current_token}
 
-    parser =
-      parser
-      |> next_token()
-      |> eat_until_semicolon()
+    parser = next_token(parser)
 
-    {parser, statement}
+    {parser, return_value} = parse_expression(parser, @lowest)
+
+    parser = eat_until_semicolon(parser)
+
+    {parser, %{statement | return_value: return_value}}
   end
 
   defp parse_expression_statement(%__MODULE__{} = parser) do

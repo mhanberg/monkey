@@ -7,46 +7,53 @@ defmodule Monkey.ParserTest do
 
   setup :lex_and_parse
 
-  @tag input: """
-       let x = 5;
-       let y = 10;
-       let foobar = 838383;
-       """
-  test "let statements", %{parser: parser, program: program} do
-    assert_parse_errors(parser)
-
-    assert program
-    assert 3 == length(program.statements)
-
+  test "let statements" do
     tests = [
-      {"x"},
-      {"y"},
-      {"foobar"}
+      {"let x = 5;", "x", 5},
+      {"let y = true;", "y", true},
+      {"let foobar = y;", "foobar", "y"}
     ]
 
-    for {{expected_identifier}, idx} <- Enum.with_index(tests) do
-      statement = Enum.at(program.statements, idx)
+    for {input, expected_identifier, expected_value} <- tests do
+      context = lex_and_parse(%{input: input})
+      parser = context[:parser]
+      %Ast.Program{statements: statements} = context[:program]
 
-      assert Ast.Node.token_literal(statement) == "let"
-      assert %Ast.LetStatement{} = statement
-      assert statement.name.value == expected_identifier
-      assert Ast.Node.token_literal(statement.name) == expected_identifier
+      assert_parse_errors(parser)
+
+      assert [statement] = statements
+
+      assert %Ast.LetStatement{
+               name: %Ast.Identifier{value: ^expected_identifier},
+               value: value
+             } = statement
+
+      assert expected_value == value.value
     end
   end
 
-  @tag input: """
-       return 5;
-       return 10;
-       return 993322;
-       """
-  test "return statements", %{parser: parser, program: program} do
-    assert_parse_errors(parser)
+  test "return statements" do
+    tests = [
+      {"return 5;", 5},
+      {"return true;", true},
+      {"return foobar;", "foobar"}
+    ]
 
-    assert program
-    assert 3 == length(program.statements)
+    for {input, expected_value} <- tests do
+      context = lex_and_parse(%{input: input})
+      parser = context[:parser]
+      %Ast.Program{statements: statements} = context[:program]
 
-    for statement <- program.statements do
-      assert %Ast.ReturnStatement{} = statement
+      assert_parse_errors(parser)
+
+      assert [statement] = statements
+
+      assert %Ast.ReturnStatement{
+               return_value: return_value
+             } = statement
+
+      assert return_value.value == expected_value
+
       assert "return" == Ast.Node.token_literal(statement)
     end
   end
