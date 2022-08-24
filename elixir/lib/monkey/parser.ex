@@ -8,10 +8,74 @@ defmodule Monkey.Parser do
     Module.put_attribute(__MODULE__, :"token_#{k}", v)
   end
 
-  defstruct [:lexer, :current_token, :peek_token, errors: []]
+  @lowest 1
+  @equals 2
+  @lessgreater 3
+  @sum 4
+  @product 5
+  @prefix 6
+  @call 7
+
+  @precedences %{
+    @token_eq => @equals,
+    @token_not_eq => @equals,
+    @token_lt => @lessgreater,
+    @token_gt => @lessgreater,
+    @token_plus => @sum,
+    @token_minus => @sum,
+    @token_slash => @product,
+    @token_asterisk => @product
+  }
+
+  @type prefix_parse_function :: (t() -> map())
+  @type infix_parse_function :: (t(), map() -> map())
+
+  @type prefix_parse_function_map :: %{Token.token_type() => prefix_parse_function()}
+  @type infix_parse_function_map :: %{Token.token_type() => infix_parse_function()}
+
+  defstruct [
+    :lexer,
+    :current_token,
+    :peek_token,
+    errors: [],
+    prefix_parse_functions: %{},
+    infix_parse_functions: %{}
+  ]
+
+  @type t :: %__MODULE__{
+          lexer: Lexer.t(),
+          current_token: Token.t(),
+          peek_token: Token.t(),
+          errors: [String.t()],
+          prefix_parse_functions: prefix_parse_function_map(),
+          infix_parse_functions: infix_parse_function_map()
+        }
 
   def new(%Lexer{} = lexer) do
-    %__MODULE__{lexer: lexer} |> next_token() |> next_token()
+    %__MODULE__{
+      lexer: lexer,
+      prefix_parse_functions: %{
+        @token_ident => &parse_identifier/1,
+        @token_int => &parse_integer_literal/1,
+        @token_bang => &parse_prefix_expression/1,
+        @token_minus => &parse_prefix_expression/1,
+        @token_true => &parse_boolean/1,
+        @token_false => &parse_boolean/1,
+        @token_lparen => &parse_grouped_expression/1
+      },
+      infix_parse_functions: %{
+        @token_eq => &parse_infix_expression/2,
+        @token_not_eq => &parse_infix_expression/2,
+        @token_lt => &parse_infix_expression/2,
+        @token_gt => &parse_infix_expression/2,
+        @token_plus => &parse_infix_expression/2,
+        @token_minus => &parse_infix_expression/2,
+        @token_slash => &parse_infix_expression/2,
+        @token_asterisk => &parse_infix_expression/2
+      }
+    }
+    |> next_token()
+    |> next_token()
   end
 
   defp next_token(%__MODULE__{} = parser) do
@@ -67,7 +131,7 @@ defmodule Monkey.Parser do
         parse_return_statement(parser)
 
       _ ->
-        {parser, nil}
+        parse_expression_statement(parser)
     end
   end
 
@@ -110,9 +174,70 @@ defmodule Monkey.Parser do
     {parser, statement}
   end
 
-  defp eat_until_semicolon(%Parser{current_token: current_token} = parser)
+  defp parse_expression_statement(%__MODULE__{} = parser) do
+    {parser, expression} = parse_expression(parser, @lowest)
+
+    statement = %Ast.ExpressionStatement{
+      token: parser.current_token,
+      expression: expression
+    }
+
+    parser =
+      if is_peek_token?(parser, @token_semicolon) do
+        next_token(parser)
+      else
+        parser
+      end
+
+    {parser, statement}
+  end
+
+  defp parse_expression(%__MODULE__{} = parser, precedence) do
+    prefix = parser.prefix_parse_functions[parser.current_token.type]
+
+    if prefix == nil do
+      parser =
+        put_parser_error(
+          parser,
+          "no prefix parse function for #{parser.current_token.type} found"
+        )
+
+      {parser, nil}
+    else
+      {parser, left_expression} = prefix.(parser)
+
+      Stream.resource(
+        fn -> {parser, left_expression, true} end,
+        fn {parser, left_expression, continue?} = acc ->
+          if continue? && !is_peek_token?(parser, @token_semicolon) &&
+               precedence < peek_precedence(parser) do
+            infix = parser.infix_parse_functions[parser.peek_token.type]
+
+            if infix == nil do
+              {[acc], {parser, left_expression, false}}
+            else
+              parser = next_token(parser)
+
+              {parser, left_expression} = infix.(parser, left_expression)
+
+              {[{parser, left_expression}], {parser, left_expression, true}}
+            end
+          else
+            {:halt, acc}
+          end
+        end,
+        fn acc -> acc end
+      )
+      |> Enum.to_list()
+      |> List.last({parser, left_expression})
+    end
+  end
+
+  defp eat_until_semicolon(%Parser{current_token: %Token{type: current_token}} = parser)
        when current_token != @token_semicolon do
-    next_token(parser)
+    parser
+    |> next_token()
+    |> eat_until_semicolon()
   end
 
   defp eat_until_semicolon(parser) do
@@ -133,9 +258,86 @@ defmodule Monkey.Parser do
     end
   end
 
-  def peek_error(%__MODULE__{} = parser, token_type) do
-    message = "expected next token to be #{token_type}, got #{parser.peek_token.type} instead"
+  defp parse_identifier(%__MODULE__{} = parser) do
+    {parser, %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}}
+  end
 
+  defp parse_integer_literal(%__MODULE__{} = parser) do
+    ast = %Ast.IntegerLiteral{token: parser.current_token}
+
+    case Integer.parse(parser.current_token.literal) do
+      :error ->
+        {put_parser_error(parser, "could not parse #{parser.current_token.literal} as integer"),
+         nil}
+
+      {value, _} ->
+        {parser, %{ast | value: value}}
+    end
+  end
+
+  defp parse_prefix_expression(%__MODULE__{} = parser) do
+    ast = %Ast.PrefixExpression{
+      token: parser.current_token,
+      operator: parser.current_token.literal
+    }
+
+    parser = next_token(parser)
+
+    {parser, right} = parse_expression(parser, @prefix)
+
+    {parser, %{ast | right: right}}
+  end
+
+  defp parse_infix_expression(%__MODULE__{} = parser, expression) do
+    ast = %Ast.InfixExpression{
+      token: parser.current_token,
+      operator: parser.current_token.literal,
+      left: expression
+    }
+
+    precedence = current_precedence(parser)
+    parser = next_token(parser)
+
+    {parser, right} = parse_expression(parser, precedence)
+
+    {parser, %{ast | right: right}}
+  end
+
+  defp parse_boolean(%__MODULE__{} = parser) do
+    {parser,
+     %Ast.Boolean{token: parser.current_token, value: parser.current_token.type == @token_true}}
+  end
+
+  defp parse_grouped_expression(%__MODULE__{} = parser) do
+    parser = next_token(parser)
+
+    {parser, expression} = parse_expression(parser, @lowest)
+
+    case expect_peek(parser, @token_rparen) do
+      {:ok, parser} ->
+        {parser, expression}
+
+      {:error, parser} ->
+        {parser, nil}
+    end
+  end
+
+  def peek_error(%__MODULE__{} = parser, token_type) do
+    put_parser_error(
+      parser,
+      "expected next token to be #{token_type}, got #{parser.peek_token.type} instead"
+    )
+  end
+
+  def peek_precedence(%__MODULE__{} = parser) do
+    Map.get(@precedences, parser.peek_token.type, @lowest)
+  end
+
+  def current_precedence(%__MODULE__{} = parser) do
+    Map.get(@precedences, parser.current_token.type, @lowest)
+  end
+
+  defp put_parser_error(parser, message) do
     %{parser | errors: [message | parser.errors]}
   end
 end

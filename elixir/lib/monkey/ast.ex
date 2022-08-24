@@ -130,9 +130,99 @@ defmodule Monkey.Ast do
     end
 
     defimpl Monkey.Ast.Expression do
-      def expression_node(_let_statement) do
+      def expression_node(_expression) do
         nil
       end
+    end
+  end
+
+  defmodule IntegerLiteral do
+    defstruct [:token, :value]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        node.token.literal
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule PrefixExpression do
+    defstruct [:token, :operator, :right]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        "(#{node.operator}#{Monkey.Ast.Node.string(node.right)})"
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule InfixExpression do
+    defstruct [:token, :operator, :left, :right]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        "(#{Monkey.Ast.Node.string(node.left)} #{node.operator} #{Monkey.Ast.Node.string(node.right)})"
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule Boolean do
+    defstruct [:token, :value]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        node.token.literal
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defimpl Monkey.Ast.Node, for: Atom do
+    def token_literal(_node) do
+      ""
+    end
+
+    def string(_node) do
+      ""
     end
   end
 end
