@@ -9,7 +9,9 @@ defmodule Monkey.EvaluatorTest do
   test "eval integer expression" do
     tests = [
       {"5", 5},
-      {"10", 10}
+      {"10", 10},
+      {"-5", -5},
+      {"-10", -10}
     ]
 
     for {input, expected} <- tests do
@@ -30,12 +32,28 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
-  defp test_integer_object(evaluted, expected) do
-    assert %Object.Integer{value: ^expected} = evaluted
+  test "bang operator" do
+    tests = [
+      {"!true", false},
+      {"!false", true},
+      {"!5", false},
+      {"!!true", true},
+      {"!!false", false},
+      {"!!5", true}
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+      test_boolean_object(evaluated, expected)
+    end
   end
 
-  defp test_boolean_object(evaluted, expected) do
-    assert %Object.Boolean{value: ^expected} = evaluted
+  defp test_integer_object(evaluated, expected) do
+    assert %Object.Integer{value: ^expected} = evaluated
+  end
+
+  defp test_boolean_object(evaluated, expected) do
+    assert %Object.Boolean{value: ^expected} = evaluated
   end
 
   defp test_eval(input) do

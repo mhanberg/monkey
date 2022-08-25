@@ -33,7 +33,7 @@ defmodule Monkey.Repl do
       evaluated = Evaluator.run(program)
 
       if evaluated do
-        IO.puts(Monkey.Object.Object.inspect(evaluated))
+        IO.puts(Monkey.Object.Obj.inspect(evaluated))
       end
     end
 

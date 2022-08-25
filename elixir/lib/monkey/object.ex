@@ -15,7 +15,7 @@ defmodule Monkey.Object do
     @types[key]
   end
 
-  defprotocol Object do
+  defprotocol Obj do
     def type(object)
     def inspect(object)
   end
@@ -23,7 +23,7 @@ defmodule Monkey.Object do
   defmodule Integer do
     defstruct [:value]
 
-    defimpl Object do
+    defimpl Obj do
       def type(_) do
         Monkey.Object.types(:integer_obj)
       end
@@ -37,7 +37,7 @@ defmodule Monkey.Object do
   defmodule Boolean do
     defstruct [:value]
 
-    defimpl Object do
+    defimpl Obj do
       def type(_) do
         Monkey.Object.types(:boolean_obj)
       end
@@ -51,7 +51,7 @@ defmodule Monkey.Object do
   defmodule Null do
     defstruct [:value]
 
-    defimpl Object do
+    defimpl Obj do
       def type(_) do
         Monkey.Object.types(:null_obj)
       end
