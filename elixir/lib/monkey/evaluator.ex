@@ -2,6 +2,9 @@ defmodule Monkey.Evaluator do
   alias Monkey.Ast
   alias Monkey.Object
 
+  @true_object %Object.Boolean{value: true}
+  @false_object %Object.Boolean{value: false}
+
   def run(node) do
     case node do
       %Ast.Program{statements: statements} ->
@@ -12,6 +15,12 @@ defmodule Monkey.Evaluator do
 
       %Ast.IntegerLiteral{value: value} ->
         %Object.Integer{value: value}
+
+      %Ast.Boolean{value: true} ->
+        @true_object
+
+      %Ast.Boolean{value: false} ->
+        @false_object
 
       _ ->
         nil

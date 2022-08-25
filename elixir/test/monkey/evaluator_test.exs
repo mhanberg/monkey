@@ -18,8 +18,24 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "boolean expressions" do
+    tests = [
+      {"true", true},
+      {"false", false}
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+      test_boolean_object(evaluated, expected)
+    end
+  end
+
   defp test_integer_object(evaluted, expected) do
     assert %Object.Integer{value: ^expected} = evaluted
+  end
+
+  defp test_boolean_object(evaluted, expected) do
+    assert %Object.Boolean{value: ^expected} = evaluted
   end
 
   defp test_eval(input) do
