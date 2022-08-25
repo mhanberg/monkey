@@ -64,6 +64,12 @@ defmodule Monkey.Evaluator do
           Obj.type(right) == Object.types(:integer_obj) ->
         eval_integer_infix_expression(operator, left, right)
 
+      operator == "==" ->
+        native_boolean_to_boolean_object(left == right)
+
+      operator == "!=" ->
+        native_boolean_to_boolean_object(left != right)
+
       true ->
         @null_object
     end
@@ -98,10 +104,35 @@ defmodule Monkey.Evaluator do
     right_val = right.value
 
     case operator do
-      "+" -> %Object.Integer{value: left_val + right_val}
-      "-" -> %Object.Integer{value: left_val - right_val}
-      "*" -> %Object.Integer{value: left_val * right_val}
-      "/" -> %Object.Integer{value: div(left_val, right_val)}
+      "+" ->
+        %Object.Integer{value: left_val + right_val}
+
+      "-" ->
+        %Object.Integer{value: left_val - right_val}
+
+      "*" ->
+        %Object.Integer{value: left_val * right_val}
+
+      "/" ->
+        %Object.Integer{value: div(left_val, right_val)}
+
+      ">" ->
+        native_boolean_to_boolean_object(left_val > right_val)
+
+      "<" ->
+        native_boolean_to_boolean_object(left_val < right_val)
+
+      "==" ->
+        native_boolean_to_boolean_object(left_val == right_val)
+
+      "!=" ->
+        native_boolean_to_boolean_object(left_val != right_val)
+
+      _ ->
+        @null_object
     end
   end
+
+  defp native_boolean_to_boolean_object(true), do: @true_object
+  defp native_boolean_to_boolean_object(false), do: @false_object
 end
