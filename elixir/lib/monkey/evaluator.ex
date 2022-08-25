@@ -25,6 +25,24 @@ defmodule Monkey.Evaluator do
       %Ast.Identifier{} = identifier ->
         eval_identifier(identifier, env)
 
+      %Ast.FunctionLiteral{parameters: parameters, body: body} ->
+        {%Object.Function{parameters: parameters, body: body, env: env}, env}
+
+      %Ast.CallExpression{function: function, arguments: arguments} ->
+        {function, env} = run(function, env)
+
+        if error?(function) do
+          {function, env}
+        else
+          {args, env} = eval_expressions(arguments, env)
+
+          if length(args) == 1 && error?(List.first(args)) do
+            {List.first(args), env}
+          end
+
+          {apply_function(function, args), env}
+        end
+
       %Ast.ExpressionStatement{expression: expression} ->
         run(expression, env)
 
@@ -246,6 +264,51 @@ defmodule Monkey.Evaluator do
 
     {v, env}
   end
+
+  defp eval_expressions(expressions, env) do
+    for expression <- expressions, reduce: {[], env} do
+      {[%Object.Error{} | _rest], _} = result ->
+        result
+
+      {evaluated_args, env} ->
+        {evalulated, env} = run(expression, env)
+        {[evalulated | evaluated_args], env}
+    end
+    |> then(fn
+      {[%Object.Error{} = error | _], env} ->
+        {[error], env}
+
+      {args, env} ->
+        {Enum.reverse(args), env}
+    end)
+  end
+
+  defp apply_function(%Object.Function{} = function, args) do
+    extended_env = extend_function_env(function, args)
+
+    {evaluated, _env} = run(function.body, extended_env)
+
+    unwrap_return_value(evaluated)
+  end
+
+  defp apply_function(function, _args, env) do
+    {%Object.Error{message: "not a function: #{Obj.type(function)}"}, env}
+  end
+
+  defp extend_function_env(function, args) do
+    env = Environment.new_enclosed(function.env)
+
+    for {param, arg} <- Enum.zip(function.parameters, args), reduce: env do
+      env ->
+        Environment.set(env, param.value, arg)
+    end
+  end
+
+  defp unwrap_return_value(%Object.ReturnValue{value: value}) do
+    value
+  end
+
+  defp unwrap_return_value(other), do: other
 
   defp native_boolean_to_boolean_object(true), do: @true_object
   defp native_boolean_to_boolean_object(false), do: @false_object

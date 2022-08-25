@@ -170,6 +170,48 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "function statement" do
+    input = "fn(x) { x + 2; };"
+
+    assert %Object.Function{
+             parameters: [
+               parameter
+             ],
+             body: body
+           } = test_eval(input)
+
+    assert "x" == Monkey.Ast.Node.string(parameter)
+    assert "(x + 2)" == Monkey.Ast.Node.string(body)
+  end
+
+  test "function application" do
+    tests = [
+      {"let identity = fn(x) { x; }; identity(5);", 5},
+      {"let identity = fn(x) { return x; }; identity(5);", 5},
+      {"let double = fn(x) { x * 2; }; double(5);", 10},
+      {"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+      {"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+      {"fn(x) { x; }(5)", 5}
+    ]
+
+    for {input, expected} <- tests do
+      input |> test_eval() |> test_integer_object(expected)
+    end
+  end
+
+  test "closures" do
+    input = """
+    let newAdder = fn(x) {
+      fn(y) { x + y };
+    };
+
+    let addTwo = newAdder(2);
+    addTwo(2);
+    """
+
+    test_integer_object(test_eval(input), 4)
+  end
+
   defp test_integer_object(evaluated, expected) do
     assert %Object.Integer{value: ^expected} = evaluated
   end
