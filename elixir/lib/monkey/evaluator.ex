@@ -9,8 +9,8 @@ defmodule Monkey.Evaluator do
 
   def run(node) do
     case node do
-      %Ast.Program{statements: statements} ->
-        eval_statements(statements)
+      %Ast.Program{} = program ->
+        eval_program(program)
 
       %Ast.ExpressionStatement{expression: expression} ->
         run(expression)
@@ -26,27 +26,70 @@ defmodule Monkey.Evaluator do
 
       %Ast.PrefixExpression{right: right, operator: operator} ->
         right = run(right)
-        eval_prefix_expression(operator, right)
+
+        if error?(right) do
+          right
+        else
+          eval_prefix_expression(operator, right)
+        end
 
       %Ast.InfixExpression{left: left, right: right, operator: operator} ->
-        left = run(left)
-        right = run(right)
-        eval_infix_expression(operator, left, right)
+        with left <- run(left),
+             {false, _} <- {error?(left), left},
+             right <- run(right),
+             {false, _} <- {error?(right), right} do
+          eval_infix_expression(operator, left, right)
+        else
+          {true, error} ->
+            error
+        end
 
-      %Ast.BlockStatement{statements: statements} ->
-        eval_statements(statements)
+      %Ast.BlockStatement{} = block_statement ->
+        eval_block_statement(block_statement)
 
       %Ast.IfExpression{} = if_expression ->
         eval_if_expression(if_expression)
+
+      %Ast.ReturnStatement{return_value: return_value} ->
+        val = run(return_value)
+
+        if error?(val) do
+          val
+        else
+          %Object.ReturnValue{value: val}
+        end
 
       _ ->
         @null_object
     end
   end
 
-  defp eval_statements(statements) do
+  defp eval_program(%Ast.Program{statements: statements}) do
     for statement <- statements, reduce: nil do
-      _result ->
+      %Object.ReturnValue{} = result ->
+        result
+
+      %Object.Error{} = result ->
+        result
+
+      _ ->
+        run(statement)
+    end
+    |> then(fn
+      %Object.ReturnValue{value: value} -> value
+      other -> other
+    end)
+  end
+
+  defp eval_block_statement(%Ast.BlockStatement{statements: statements}) do
+    for statement <- statements, reduce: nil do
+      %Object.ReturnValue{} = result ->
+        result
+
+      %Object.Error{} = result ->
+        result
+
+      _ ->
         run(statement)
     end
   end
@@ -60,7 +103,7 @@ defmodule Monkey.Evaluator do
         eval_minus_prefix_operator(right)
 
       _ ->
-        @null_object
+        %Object.Error{message: "unknown operator: #{operator}#{Obj.type(right)}"}
     end
   end
 
@@ -76,8 +119,13 @@ defmodule Monkey.Evaluator do
       operator == "!=" ->
         native_boolean_to_boolean_object(left != right)
 
+      Obj.type(left) != Obj.type(right) ->
+        %Object.Error{message: "type mismatch: #{Obj.type(left)} #{operator} #{Obj.type(right)}"}
+
       true ->
-        @null_object
+        %Object.Error{
+          message: "unknown operator: #{Obj.type(left)} #{operator} #{Obj.type(right)}"
+        }
     end
   end
 
@@ -99,7 +147,7 @@ defmodule Monkey.Evaluator do
 
   defp eval_minus_prefix_operator(right) do
     if Obj.type(right) != Object.types(:integer_obj) do
-      @null_object
+      %Object.Error{message: "unknown operator: -#{Obj.type(right)}"}
     else
       %Object.Integer{value: -right.value}
     end
@@ -135,7 +183,9 @@ defmodule Monkey.Evaluator do
         native_boolean_to_boolean_object(left_val != right_val)
 
       _ ->
-        @null_object
+        %Object.Error{
+          message: "unknown operator: #{Obj.type(left)} #{operator}#{Obj.type(right)}"
+        }
     end
   end
 
@@ -147,6 +197,9 @@ defmodule Monkey.Evaluator do
     condition = run(condition)
 
     cond do
+      error?(condition) ->
+        condition
+
       truthy?(condition) ->
         run(consequence)
 
@@ -165,4 +218,12 @@ defmodule Monkey.Evaluator do
   defp truthy?(@true_object), do: true
   defp truthy?(@false_object), do: false
   defp truthy?(_), do: true
+
+  defp error?(nil) do
+    false
+  end
+
+  defp error?(obj) do
+    Obj.type(obj) == Object.types(:error_obj)
+  end
 end

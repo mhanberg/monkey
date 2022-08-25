@@ -3,8 +3,10 @@ defmodule Monkey.Object do
 
   @types %{
     integer_obj: "INTEGER",
-    boolean_ojb: "BOOLEAN",
-    null_obj: "NULL"
+    boolean_obj: "BOOLEAN",
+    null_obj: "NULL",
+    return_value_obj: "RETURN_VALUE",
+    error_obj: "ERROR"
   }
 
   def types() do
@@ -12,7 +14,7 @@ defmodule Monkey.Object do
   end
 
   def types(key) do
-    @types[key]
+    Map.fetch!(@types, key)
   end
 
   defprotocol Obj do
@@ -58,6 +60,34 @@ defmodule Monkey.Object do
 
       def inspect(_) do
         "null"
+      end
+    end
+  end
+
+  defmodule ReturnValue do
+    defstruct [:value]
+
+    defimpl Obj do
+      def type(_) do
+        Monkey.Object.types(:return_value_obj)
+      end
+
+      def inspect(object) do
+        Monkey.Object.Obj.inspect(object.value)
+      end
+    end
+  end
+
+  defmodule Error do
+    defstruct [:message]
+
+    defimpl Obj do
+      def type(_) do
+        Monkey.Object.types(:error_obj)
+      end
+
+      def inspect(object) do
+        "ERROR: #{object.message}"
       end
     end
   end

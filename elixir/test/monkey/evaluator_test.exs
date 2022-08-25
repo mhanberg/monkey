@@ -98,6 +98,63 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "return statement" do
+    tests = [
+      {"return 10;", 10},
+      {"return 10; 9;", 10},
+      {"return 2 * 5; 9;", 10},
+      {"9; return 2 * 5; 9;", 10},
+      {"if (10 > 1) { return 10; }", 10},
+      {
+        """
+        if (10 > 1) {
+          if (10 > 1) {
+            return 10;
+          }
+
+          return 1;
+        }
+        """,
+        10
+      }
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+      test_integer_object(evaluated, expected)
+    end
+  end
+
+  test "error handling" do
+    tests = [
+      {"5 + true;", "type mismatch: INTEGER + BOOLEAN"},
+      {"5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"},
+      {"-true", "unknown operator: -BOOLEAN"},
+      {"true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
+      {"true + false + true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
+      {"5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"},
+      {"if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN"},
+      {
+        """
+        if (10 > 1) {
+          if (10 > 1) {
+            return true + false;
+          }
+
+          return 1;
+        }
+        """,
+        "unknown operator: BOOLEAN + BOOLEAN"
+      }
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+      assert %Object.Error{message: message} = evaluated
+      assert expected == message
+    end
+  end
+
   defp test_integer_object(evaluated, expected) do
     assert %Object.Integer{value: ^expected} = evaluated
   end
