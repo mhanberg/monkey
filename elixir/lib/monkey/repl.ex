@@ -1,6 +1,7 @@
 defmodule Monkey.Repl do
   alias Monkey.Lexer
   alias Monkey.Parser
+  alias Monkey.Evaluator
 
   require Logger
 
@@ -29,7 +30,11 @@ defmodule Monkey.Repl do
 
       Logger.error(message)
     else
-      IO.puts(Monkey.Ast.Node.string(program))
+      evaluated = Evaluator.run(program)
+
+      if evaluated do
+        IO.puts(Monkey.Object.Object.inspect(evaluated))
+      end
     end
 
     read()

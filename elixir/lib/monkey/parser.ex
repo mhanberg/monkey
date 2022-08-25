@@ -205,8 +205,7 @@ defmodule Monkey.Parser do
       }
 
       parser =
-        if is_peek_token?(parser, @token_semicolon)
-           |> IO.inspect(label: "parse expression statement, is_peek_token?") do
+        if is_peek_token?(parser, @token_semicolon) do
           next_token(parser)
         else
           parser
