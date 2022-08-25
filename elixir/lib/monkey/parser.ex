@@ -4,6 +4,8 @@ defmodule Monkey.Parser do
   alias Monkey.Token
   alias Monkey.Parser
 
+  import Monkey.Tracing
+
   for {k, v} <- Token.tokens() do
     Module.put_attribute(__MODULE__, :"token_#{k}", v)
   end
@@ -93,18 +95,19 @@ defmodule Monkey.Parser do
     }
   end
 
+  @spec parse_program(t()) :: {t(), %Ast.Program{}}
   def parse_program(%__MODULE__{} = parser) do
-    program = %Ast.Program{}
+    trace "program" do
+      program = %Ast.Program{}
 
-    {parser, program} = parse_program_statement(parser, program)
+      {parser, program} = parse_program_statement(parser, program)
 
-    parser = next_token(parser)
-
-    {%{parser | errors: Enum.reverse(parser.errors)},
-     %{
-       program
-       | statements: Enum.reverse(program.statements)
-     }}
+      {%{parser | errors: Enum.reverse(parser.errors)},
+       %{
+         program
+         | statements: Enum.reverse(program.statements)
+       }}
+    end
   end
 
   defp parse_program_statement(
@@ -131,110 +134,121 @@ defmodule Monkey.Parser do
   end
 
   defp parse_statement(%Parser{} = parser) do
-    case parser.current_token.type do
-      @token_let ->
-        parse_let_statement(parser)
+    trace "statement" do
+      case parser.current_token.type do
+        @token_let ->
+          parse_let_statement(parser)
 
-      @token_return ->
-        parse_return_statement(parser)
+        @token_return ->
+          parse_return_statement(parser)
 
-      _ ->
-        parse_expression_statement(parser)
+        _ ->
+          parse_expression_statement(parser)
+      end
     end
   end
 
   defp parse_let_statement(%Parser{} = parser) do
-    statement = %Ast.LetStatement{token: parser.current_token}
+    trace "let statement" do
+      statement = %Ast.LetStatement{token: parser.current_token}
 
-    case expect_peek(parser, @token_ident) do
-      {:ok, parser} ->
-        statement = %{
-          statement
-          | name: %Ast.Identifier{
-              token: parser.current_token,
-              value: parser.current_token.literal
-            }
-        }
+      case expect_peek(parser, @token_ident) do
+        {:ok, parser} ->
+          statement = %{
+            statement
+            | name: %Ast.Identifier{
+                token: parser.current_token,
+                value: parser.current_token.literal
+              }
+          }
 
-        case expect_peek(parser, @token_assign) do
-          {:ok, parser} ->
-            parser = next_token(parser)
+          case expect_peek(parser, @token_assign) do
+            {:ok, parser} ->
+              parser = next_token(parser)
 
-            {parser, value} = parse_expression(parser, @lowest)
-            parser = eat_until_semicolon(parser)
+              {parser, value} = parse_expression(parser, @lowest)
+              parser = eat_until_semicolon(parser)
 
-            {parser, %{statement | value: value}}
+              {parser, %{statement | value: value}}
 
-          {:error, parser} ->
-            {parser, nil}
-        end
+            {:error, parser} ->
+              {parser, nil}
+          end
 
-      {:error, parser} ->
-        {parser, nil}
+        {:error, parser} ->
+          {parser, nil}
+      end
     end
   end
 
   defp parse_return_statement(%__MODULE__{} = parser) do
-    statement = %Ast.ReturnStatement{token: parser.current_token}
+    trace "return statement" do
+      statement = %Ast.ReturnStatement{token: parser.current_token}
 
-    parser = next_token(parser)
+      parser = next_token(parser)
 
-    {parser, return_value} = parse_expression(parser, @lowest)
+      {parser, return_value} = parse_expression(parser, @lowest)
 
-    parser = eat_until_semicolon(parser)
+      parser = eat_until_semicolon(parser)
 
-    {parser, %{statement | return_value: return_value}}
+      {parser, %{statement | return_value: return_value}}
+    end
   end
 
   defp parse_expression_statement(%__MODULE__{} = parser) do
-    {parser, expression} = parse_expression(parser, @lowest)
+    trace "expression statement" do
+      {parser, expression} = parse_expression(parser, @lowest)
 
-    statement = %Ast.ExpressionStatement{
-      token: parser.current_token,
-      expression: expression
-    }
+      statement = %Ast.ExpressionStatement{
+        token: parser.current_token,
+        expression: expression
+      }
 
-    parser =
-      if is_peek_token?(parser, @token_semicolon) do
-        next_token(parser)
-      else
-        parser
-      end
+      parser =
+        if is_peek_token?(parser, @token_semicolon)
+           |> IO.inspect(label: "parse expression statement, is_peek_token?") do
+          next_token(parser)
+        else
+          parser
+        end
 
-    {parser, statement}
+      {parser, statement}
+    end
   end
 
   defp parse_expression(%__MODULE__{} = parser, precedence) do
-    prefix = parser.prefix_parse_functions[parser.current_token.type]
+    trace "expression" do
+      prefix = parser.prefix_parse_functions[parser.current_token.type]
 
-    if prefix == nil do
-      parser =
-        put_parser_error(
-          parser,
-          "no prefix parse function for #{parser.current_token.type} found"
-        )
+      if prefix == nil do
+        parser =
+          put_parser_error(
+            parser,
+            "no prefix parse function for #{parser.current_token.type} found"
+          )
 
-      {parser, nil}
-    else
-      {parser, left_expression} = prefix.(parser)
+        {parser, nil}
+      else
+        {parser, left_expression} = prefix.(parser)
 
-      while(
-        {parser, left_expression},
-        fn {parser, _} ->
-          !is_peek_token?(parser, @token_semicolon) && precedence < peek_precedence(parser)
-        end,
-        fn {parser, left_expression} ->
-          infix = parser.infix_parse_functions[parser.peek_token.type]
+        while(
+          {parser, left_expression},
+          fn {parser, _} ->
+            !is_peek_token?(parser, @token_semicolon) && precedence < peek_precedence(parser)
+          end,
+          fn {parser, left_expression} ->
+            infix = parser.infix_parse_functions[parser.peek_token.type]
 
-          if infix == nil do
-            {parser, left_expression}
-          else
-            parser = next_token(parser)
+            if infix == nil do
+              {parser, left_expression}
+            else
+              parser = next_token(parser)
 
-            infix.(parser, left_expression)
+              infix.(parser, left_expression)
+            end
           end
-        end
-      )
+        )
+      end
     end
   end
 
@@ -265,238 +279,262 @@ defmodule Monkey.Parser do
   end
 
   defp parse_identifier(%__MODULE__{} = parser) do
-    {parser, %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}}
+    trace "identifier" do
+      {parser, %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}}
+    end
   end
 
   defp parse_integer_literal(%__MODULE__{} = parser) do
-    ast = %Ast.IntegerLiteral{token: parser.current_token}
+    trace "integer literal" do
+      ast = %Ast.IntegerLiteral{token: parser.current_token}
 
-    case Integer.parse(parser.current_token.literal) do
-      :error ->
-        {put_parser_error(parser, "could not parse #{parser.current_token.literal} as integer"),
-         nil}
+      case Integer.parse(parser.current_token.literal) do
+        :error ->
+          {put_parser_error(parser, "could not parse #{parser.current_token.literal} as integer"),
+           nil}
 
-      {value, _} ->
-        {parser, %{ast | value: value}}
+        {value, _} ->
+          {parser, %{ast | value: value}}
+      end
     end
   end
 
   defp parse_prefix_expression(%__MODULE__{} = parser) do
-    ast = %Ast.PrefixExpression{
-      token: parser.current_token,
-      operator: parser.current_token.literal
-    }
+    trace "prefix expression" do
+      ast = %Ast.PrefixExpression{
+        token: parser.current_token,
+        operator: parser.current_token.literal
+      }
 
-    parser = next_token(parser)
+      parser = next_token(parser)
 
-    {parser, right} = parse_expression(parser, @prefix)
+      {parser, right} = parse_expression(parser, @prefix)
 
-    {parser, %{ast | right: right}}
+      {parser, %{ast | right: right}}
+    end
   end
 
   defp parse_infix_expression(%__MODULE__{} = parser, expression) do
-    ast = %Ast.InfixExpression{
-      token: parser.current_token,
-      operator: parser.current_token.literal,
-      left: expression
-    }
+    trace "infix expression" do
+      ast = %Ast.InfixExpression{
+        token: parser.current_token,
+        operator: parser.current_token.literal,
+        left: expression
+      }
 
-    precedence = current_precedence(parser)
-    parser = next_token(parser)
+      precedence = current_precedence(parser)
+      parser = next_token(parser)
 
-    {parser, right} = parse_expression(parser, precedence)
+      {parser, right} = parse_expression(parser, precedence)
 
-    {parser, %{ast | right: right}}
+      {parser, %{ast | right: right}}
+    end
   end
 
   defp parse_boolean(%__MODULE__{} = parser) do
-    {parser,
-     %Ast.Boolean{token: parser.current_token, value: parser.current_token.type == @token_true}}
+    trace "boolean" do
+      {parser,
+       %Ast.Boolean{token: parser.current_token, value: parser.current_token.type == @token_true}}
+    end
   end
 
   defp parse_grouped_expression(%__MODULE__{} = parser) do
-    parser = next_token(parser)
+    trace "grouped expression" do
+      parser = next_token(parser)
 
-    {parser, expression} = parse_expression(parser, @lowest)
+      {parser, expression} = parse_expression(parser, @lowest)
 
-    case expect_peek(parser, @token_rparen) do
-      {:ok, parser} ->
-        {parser, expression}
+      case expect_peek(parser, @token_rparen) do
+        {:ok, parser} ->
+          {parser, expression}
 
-      {:error, parser} ->
-        {parser, nil}
+        {:error, parser} ->
+          {parser, nil}
+      end
     end
   end
 
   defp parse_if_expression(%__MODULE__{} = parser) do
-    expression = %Ast.IfExpression{token: parser.current_token}
+    trace "if expression" do
+      expression = %Ast.IfExpression{token: parser.current_token}
 
-    case expect_peek(parser, @token_lparen) do
-      {:error, parser} ->
-        {parser, nil}
+      case expect_peek(parser, @token_lparen) do
+        {:error, parser} ->
+          {parser, nil}
 
-      {:ok, parser} ->
-        parser = next_token(parser)
+        {:ok, parser} ->
+          parser = next_token(parser)
 
-        {parser, condition} = parse_expression(parser, @lowest)
+          {parser, condition} = parse_expression(parser, @lowest)
 
-        with {:ok, parser} <- expect_peek(parser, @token_rparen),
-             {:ok, parser} <- expect_peek(parser, @token_lbrace) do
-          {parser, consequence} = parse_block_statement(parser)
+          with {:ok, parser} <- expect_peek(parser, @token_rparen),
+               {:ok, parser} <- expect_peek(parser, @token_lbrace) do
+            {parser, consequence} = parse_block_statement(parser)
 
-          {parser, alternative} =
-            if is_peek_token?(parser, @token_else) do
-              parser = next_token(parser)
+            {parser, alternative} =
+              if is_peek_token?(parser, @token_else) do
+                parser = next_token(parser)
 
-              case expect_peek(parser, @token_lbrace) do
-                {:ok, parser} ->
-                  parse_block_statement(parser)
+                case expect_peek(parser, @token_lbrace) do
+                  {:ok, parser} ->
+                    parse_block_statement(parser)
 
-                {:error, parser} ->
-                  {parser, nil}
+                  {:error, parser} ->
+                    {parser, nil}
+                end
+              else
+                {parser, nil}
               end
-            else
-              {parser, nil}
-            end
 
-          {parser,
-           %{
-             expression
-             | condition: condition,
-               consequence: consequence,
-               alternative: alternative
-           }}
-        else
-          {:error, parser} ->
-            {parser, nil}
-        end
+            {parser,
+             %{
+               expression
+               | condition: condition,
+                 consequence: consequence,
+                 alternative: alternative
+             }}
+          else
+            {:error, parser} ->
+              {parser, nil}
+          end
+      end
     end
   end
 
   defp parse_block_statement(%__MODULE__{} = parser) do
-    block = %Ast.BlockStatement{token: parser.current_token, statements: []}
+    trace "block statement" do
+      block = %Ast.BlockStatement{token: parser.current_token, statements: []}
 
-    parser = next_token(parser)
+      parser = next_token(parser)
 
-    while(
-      {parser, block},
-      fn {parser, _} ->
-        parser.current_token.type != @token_rbrace && parser.current_token.type != @token_eof
-      end,
-      fn {parser, block} ->
-        {parser, statement} = parse_statement(parser)
+      while(
+        {parser, block},
+        fn {parser, _} ->
+          parser.current_token.type != @token_rbrace && parser.current_token.type != @token_eof
+        end,
+        fn {parser, block} ->
+          {parser, statement} = parse_statement(parser)
 
-        block =
-          if statement do
-            %{block | statements: block.statements ++ [statement]}
-          else
-            block
-          end
+          block =
+            if statement do
+              %{block | statements: block.statements ++ [statement]}
+            else
+              block
+            end
 
-        {next_token(parser), block}
-      end
-    )
+          {next_token(parser), block}
+        end
+      )
+    end
   end
 
   defp parse_function_literal(%__MODULE__{} = parser) do
-    function = %Ast.FunctionLiteral{token: parser.current_token}
+    trace "function literal" do
+      function = %Ast.FunctionLiteral{token: parser.current_token}
 
-    case expect_peek(parser, @token_lparen) do
-      {:ok, parser} ->
-        {parser, parameters} = parse_function_parameters(parser)
+      case expect_peek(parser, @token_lparen) do
+        {:ok, parser} ->
+          {parser, parameters} = parse_function_parameters(parser)
 
-        case expect_peek(parser, @token_lbrace) do
-          {:ok, parser} ->
-            {parser, body} = parse_block_statement(parser)
+          case expect_peek(parser, @token_lbrace) do
+            {:ok, parser} ->
+              {parser, body} = parse_block_statement(parser)
 
-            {parser, %{function | parameters: parameters, body: body}}
+              {parser, %{function | parameters: parameters, body: body}}
 
-          {:error, parser} ->
-            {parser, nil}
-        end
+            {:error, parser} ->
+              {parser, nil}
+          end
 
-      {:error, parser} ->
-        {parser, nil}
+        {:error, parser} ->
+          {parser, nil}
+      end
     end
   end
 
   defp parse_function_parameters(%__MODULE__{} = parser) do
-    identifiers = []
+    trace "function parameters" do
+      identifiers = []
 
-    if is_peek_token?(parser, @token_rparen) do
-      parser = next_token(parser)
+      if is_peek_token?(parser, @token_rparen) do
+        parser = next_token(parser)
 
-      {parser, identifiers}
-    else
-      parser = next_token(parser)
+        {parser, identifiers}
+      else
+        parser = next_token(parser)
 
-      ident = %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}
-      identifiers = identifiers ++ [ident]
+        ident = %Ast.Identifier{token: parser.current_token, value: parser.current_token.literal}
+        identifiers = identifiers ++ [ident]
 
-      {parser, identifiers} =
-        while(
-          {parser, identifiers},
-          fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
-          fn {parser, identifiers} ->
-            parser = parser |> next_token() |> next_token()
+        {parser, identifiers} =
+          while(
+            {parser, identifiers},
+            fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
+            fn {parser, identifiers} ->
+              parser = parser |> next_token() |> next_token()
 
-            ident = %Ast.Identifier{
-              token: parser.current_token,
-              value: parser.current_token.literal
-            }
+              ident = %Ast.Identifier{
+                token: parser.current_token,
+                value: parser.current_token.literal
+              }
 
-            {parser, identifiers ++ [ident]}
-          end
-        )
+              {parser, identifiers ++ [ident]}
+            end
+          )
 
-      case expect_peek(parser, @token_rparen) do
-        {:ok, parser} ->
-          {parser, identifiers}
+        case expect_peek(parser, @token_rparen) do
+          {:ok, parser} ->
+            {parser, identifiers}
 
-        {:error, parser} ->
-          {parser, nil}
+          {:error, parser} ->
+            {parser, nil}
+        end
       end
     end
   end
 
   def parse_call_expression(%__MODULE__{} = parser, expression) do
-    expression = %Ast.CallExpression{token: parser.current_token, function: expression}
+    trace "call expression" do
+      expression = %Ast.CallExpression{token: parser.current_token, function: expression}
 
-    {parser, call_args} = parse_call_arguments(parser)
+      {parser, call_args} = parse_call_arguments(parser)
 
-    {parser, %{expression | arguments: call_args}}
+      {parser, %{expression | arguments: call_args}}
+    end
   end
 
   defp parse_call_arguments(%__MODULE__{} = parser) do
-    args = []
+    trace "call arguments" do
+      args = []
 
-    if is_peek_token?(parser, @token_rparen) do
-      parser = next_token(parser)
+      if is_peek_token?(parser, @token_rparen) do
+        parser = next_token(parser)
 
-      {parser, args}
-    else
-      parser = next_token(parser)
-      {parser, expression} = parse_expression(parser, @lowest)
-      args = args ++ [expression]
+        {parser, args}
+      else
+        parser = next_token(parser)
+        {parser, expression} = parse_expression(parser, @lowest)
+        args = args ++ [expression]
 
-      {parser, args} =
-        while(
-          {parser, args},
-          fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
-          fn {parser, args} ->
-            parser = parser |> next_token() |> next_token()
+        {parser, args} =
+          while(
+            {parser, args},
+            fn {parser, _} -> is_peek_token?(parser, @token_comma) end,
+            fn {parser, args} ->
+              parser = parser |> next_token() |> next_token()
 
-            {parser, expression} = parse_expression(parser, @lowest)
-            {parser, args ++ [expression]}
-          end
-        )
+              {parser, expression} = parse_expression(parser, @lowest)
+              {parser, args ++ [expression]}
+            end
+          )
 
-      case expect_peek(parser, @token_rparen) do
-        {:ok, parser} ->
-          {parser, args}
+        case expect_peek(parser, @token_rparen) do
+          {:ok, parser} ->
+            {parser, args}
 
-        {:error, parser} ->
-          {parser, nil}
+          {:error, parser} ->
+            {parser, nil}
+        end
       end
     end
   end

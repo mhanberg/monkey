@@ -1,4 +1,6 @@
 defmodule Monkey.Ast do
+  import Monkey.Tracing
+
   defprotocol Node do
     def token_literal(node)
     def string(node)
@@ -27,8 +29,10 @@ defmodule Monkey.Ast do
       end
 
       def string(%Monkey.Ast.Program{statements: statements}) do
-        for s <- statements, into: "" do
-          Monkey.Ast.Node.string(s)
+        trace "string/1 Program" do
+          for s <- statements, into: "" do
+            Monkey.Ast.Node.string(s)
+          end
         end
       end
     end
@@ -43,16 +47,18 @@ defmodule Monkey.Ast do
       end
 
       def string(%Monkey.Ast.LetStatement{} = ls) do
-        str = "#{Monkey.Ast.Node.token_literal(ls)} #{Monkey.Ast.Node.string(ls.name)} = "
+        trace "string/1 LetStatement" do
+          str = "#{Monkey.Ast.Node.token_literal(ls)} #{Monkey.Ast.Node.string(ls.name)} = "
 
-        str =
-          if ls.value != nil do
-            str <> Monkey.Ast.Node.string(ls.value)
-          else
-            str
-          end
+          str =
+            if ls.value != nil do
+              str <> Monkey.Ast.Node.string(ls.value)
+            else
+              str
+            end
 
-        str <> ";"
+          str <> ";"
+        end
       end
     end
 
@@ -72,16 +78,18 @@ defmodule Monkey.Ast do
       end
 
       def string(%Monkey.Ast.ReturnStatement{} = rs) do
-        str = "#{Monkey.Ast.Node.token_literal(rs)} "
+        trace "string/1 ReturnStatement" do
+          str = "#{Monkey.Ast.Node.token_literal(rs)} "
 
-        str =
-          if rs.return_value != nil do
-            str <> Monkey.Ast.Node.string(rs.return_value)
-          else
-            str
-          end
+          str =
+            if rs.return_value != nil do
+              str <> Monkey.Ast.Node.string(rs.return_value)
+            else
+              str
+            end
 
-        str <> ";"
+          str <> ";"
+        end
       end
     end
 
@@ -101,10 +109,12 @@ defmodule Monkey.Ast do
       end
 
       def string(%Monkey.Ast.ExpressionStatement{} = expression_statement) do
-        if expression_statement.expression != nil do
-          Monkey.Ast.Node.string(expression_statement.expression)
-        else
-          ""
+        trace "string/1 ExpressionStatement" do
+          if expression_statement.expression != nil do
+            Monkey.Ast.Node.string(expression_statement.expression)
+          else
+            ""
+          end
         end
       end
     end
@@ -125,7 +135,9 @@ defmodule Monkey.Ast do
       end
 
       def string(identifier) do
-        identifier.value
+        trace "string/1 Identifier" do
+          identifier.value
+        end
       end
     end
 
@@ -145,7 +157,9 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        node.token.literal
+        trace "string/1 IntegerLiteral" do
+          node.token.literal
+        end
       end
     end
 
@@ -165,7 +179,9 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        "(#{node.operator}#{Monkey.Ast.Node.string(node.right)})"
+        trace "string/1 PrefixExpression" do
+          "(#{node.operator}#{Monkey.Ast.Node.string(node.right)})"
+        end
       end
     end
 
@@ -185,7 +201,9 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        "(#{Monkey.Ast.Node.string(node.left)} #{node.operator} #{Monkey.Ast.Node.string(node.right)})"
+        trace "string/1 InfixExpression" do
+          "(#{Monkey.Ast.Node.string(node.left)} #{node.operator} #{Monkey.Ast.Node.string(node.right)})"
+        end
       end
     end
 
@@ -205,7 +223,9 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        node.token.literal
+        trace "string/1 Boolean" do
+          node.token.literal
+        end
       end
     end
 
@@ -213,16 +233,6 @@ defmodule Monkey.Ast do
       def expression_node(_expression) do
         nil
       end
-    end
-  end
-
-  defimpl Monkey.Ast.Node, for: Atom do
-    def token_literal(_node) do
-      ""
-    end
-
-    def string(_node) do
-      ""
     end
   end
 
@@ -235,13 +245,15 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        string =
-          "if#{Monkey.Ast.Node.string(node.condition)} #{Monkey.Ast.Node.string(node.consequence)}"
+        trace "string/1 IfExpression" do
+          string =
+            "if#{Monkey.Ast.Node.string(node.condition)} #{Monkey.Ast.Node.string(node.consequence)}"
 
-        if node.alternative do
-          string <> "else #{Monkey.Ast.Node.string(node.alternative)}"
-        else
-          string
+          if node.alternative do
+            string <> "else #{Monkey.Ast.Node.string(node.alternative)}"
+          else
+            string
+          end
         end
       end
     end
@@ -262,8 +274,10 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        for s <- node.statements, into: "" do
-          Monkey.Ast.Node.string(s)
+        trace "string/1 BlockStatement" do
+          for s <- node.statements, into: "" do
+            Monkey.Ast.Node.string(s)
+          end
         end
       end
     end
@@ -284,15 +298,17 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        parameters =
-          Enum.join(
-            for p <- node.parameters do
-              Monkey.Ast.Node.string(p)
-            end,
-            ", "
-          )
+        trace "string/1 FunctionLiteral" do
+          parameters =
+            Enum.join(
+              for p <- node.parameters do
+                Monkey.Ast.Node.string(p)
+              end,
+              ", "
+            )
 
-        "#{Monkey.Ast.Node.string(node)}(#{parameters})#{Monkey.Ast.Node.string(node.body)}"
+          "#{node.token.literal}(#{parameters}) { #{Monkey.Ast.Node.string(node.body)} }"
+        end
       end
     end
 
@@ -312,15 +328,17 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        arguments =
-          Enum.join(
-            for p <- node.arguments do
-              Monkey.Ast.Node.string(p)
-            end,
-            ", "
-          )
+        trace "string/1 CallExpression" do
+          arguments =
+            Enum.join(
+              for p <- node.arguments do
+                Monkey.Ast.Node.string(p)
+              end,
+              ", "
+            )
 
-        "#{Monkey.Ast.Node.string(node.function)}(#{arguments})"
+          "#{Monkey.Ast.Node.string(node.function)}(#{arguments})"
+        end
       end
     end
 
@@ -337,7 +355,9 @@ defmodule Monkey.Ast do
     end
 
     def string(_node) do
-      ""
+      trace "string/1 Atom" do
+        ""
+      end
     end
   end
 end

@@ -1,6 +1,8 @@
 defmodule Monkey.Repl do
   alias Monkey.Lexer
-  alias Monkey.Token
+  alias Monkey.Parser
+
+  require Logger
 
   @prompt ">> "
 
@@ -9,33 +11,27 @@ defmodule Monkey.Repl do
   end
 
   defp read() do
-    IO.puts("starting to read")
     line = IO.gets(@prompt)
 
-    lexer = Lexer.new(line)
+    parser =
+      line
+      |> Lexer.new()
+      |> Parser.new()
 
-    Enum.reduce_while(stream_tokens(lexer), nil, fn token, _ ->
-      if token.type == Token.tokens().eof do
-        {:halt, nil}
-      else
-        IO.inspect(token)
-        {:cont, nil}
-      end
-    end)
+    {_parser, program} = Parser.parse_program(parser)
+
+    if length(parser.errors) > 0 do
+      message = """
+      Parsing errors:
+
+      #{Enum.join(parser.errors, "\n")}
+      """
+
+      Logger.error(message)
+    else
+      IO.puts(Monkey.Ast.Node.string(program))
+    end
 
     read()
-  end
-
-  defp stream_tokens(lexer) do
-    Stream.resource(
-      fn ->
-        lexer
-      end,
-      fn lexer ->
-        {lexer, token} = Lexer.next_token(lexer)
-        {[token], lexer}
-      end,
-      fn lexer -> lexer end
-    )
   end
 end
