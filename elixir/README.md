@@ -1,21 +1,20 @@
 # Monkey
 
-**TODO: Add description**
+An Elixir implementation of the Monkey programming language from Thorsten Ball's book, [_Writing An Interpreter In Go_](https://interpreterbook.com).
 
-## Installation
+## Getting Started
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `monkey` to your list of dependencies in `mix.exs`:
+Once compiled, you can start a REPL or run a `.mky` file.
 
-```elixir
-def deps do
-  [
-    {:monkey, "~> 0.1.0"}
-  ]
-end
+```shell
+$ mix monkey.repl
+Hello mitchell! This is the Monkey programming language!
+>> 10 * 10
+100
+>>
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/monkey>.
-
+```shell
+$ mix monkey.run example.mky
+5
+```
