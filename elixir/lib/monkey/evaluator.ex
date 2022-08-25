@@ -2,6 +2,7 @@ defmodule Monkey.Evaluator do
   alias Monkey.Ast
   alias Monkey.Object
 
+  @null_object %Object.Null{}
   @true_object %Object.Boolean{value: true}
   @false_object %Object.Boolean{value: false}
 
@@ -23,7 +24,7 @@ defmodule Monkey.Evaluator do
         @false_object
 
       _ ->
-        nil
+        @null_object
     end
   end
 
