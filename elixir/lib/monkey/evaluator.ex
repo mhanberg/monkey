@@ -1,97 +1,117 @@
 defmodule Monkey.Evaluator do
   alias Monkey.Ast
   alias Monkey.Object
+  alias Monkey.Environment
   alias Monkey.Object.Obj
 
   @null_object %Object.Null{}
   @true_object %Object.Boolean{value: true}
   @false_object %Object.Boolean{value: false}
 
-  def run(node) do
+  def run(node, %Environment{} = env) do
     case node do
       %Ast.Program{} = program ->
-        eval_program(program)
+        eval_program(program, env)
 
-      %Ast.ExpressionStatement{expression: expression} ->
-        run(expression)
+      %Ast.LetStatement{name: name, value: value} ->
+        {val, env} = run(value, env)
 
-      %Ast.IntegerLiteral{value: value} ->
-        %Object.Integer{value: value}
-
-      %Ast.Boolean{value: true} ->
-        @true_object
-
-      %Ast.Boolean{value: false} ->
-        @false_object
-
-      %Ast.PrefixExpression{right: right, operator: operator} ->
-        right = run(right)
-
-        if error?(right) do
-          right
+        if error?(val) do
+          {val, env}
         else
-          eval_prefix_expression(operator, right)
+          {nil, Environment.set(env, name.value, val)}
         end
 
+      %Ast.Identifier{} = identifier ->
+        eval_identifier(identifier, env)
+
+      %Ast.ExpressionStatement{expression: expression} ->
+        run(expression, env)
+
+      %Ast.IntegerLiteral{value: value} ->
+        {%Object.Integer{value: value}, env}
+
+      %Ast.Boolean{value: true} ->
+        {@true_object, env}
+
+      %Ast.Boolean{value: false} ->
+        {@false_object, env}
+
+      %Ast.PrefixExpression{right: right, operator: operator} ->
+        {right, env} = run(right, env)
+
+        v =
+          if error?(right) do
+            right
+          else
+            eval_prefix_expression(operator, right)
+          end
+
+        {v, env}
+
       %Ast.InfixExpression{left: left, right: right, operator: operator} ->
-        with left <- run(left),
+        with {left, env} <- run(left, env),
              {false, _} <- {error?(left), left},
-             right <- run(right),
+             {right, env} <- run(right, env),
              {false, _} <- {error?(right), right} do
-          eval_infix_expression(operator, left, right)
+          {eval_infix_expression(operator, left, right), env}
         else
           {true, error} ->
-            error
+            {error, env}
         end
 
       %Ast.BlockStatement{} = block_statement ->
-        eval_block_statement(block_statement)
+        eval_block_statement(block_statement, env)
 
       %Ast.IfExpression{} = if_expression ->
-        eval_if_expression(if_expression)
+        eval_if_expression(if_expression, env)
 
       %Ast.ReturnStatement{return_value: return_value} ->
-        val = run(return_value)
+        {val, env} = run(return_value, env)
 
         if error?(val) do
-          val
+          {val, env}
         else
-          %Object.ReturnValue{value: val}
+          {%Object.ReturnValue{value: val}, env}
         end
 
       _ ->
-        @null_object
+        {@null_object, env}
     end
   end
 
-  defp eval_program(%Ast.Program{statements: statements}) do
-    for statement <- statements, reduce: nil do
-      %Object.ReturnValue{} = result ->
+  defp eval_program(%Ast.Program{statements: statements}, env) do
+    for statement <- statements, reduce: {nil, env} do
+      {%Object.ReturnValue{}, _} = result ->
         result
 
-      %Object.Error{} = result ->
+      {%Object.Error{}, _} = result ->
         result
 
-      _ ->
-        run(statement)
+      {_, env} ->
+        run(statement, env)
     end
     |> then(fn
-      %Object.ReturnValue{value: value} -> value
+      {%Object.ReturnValue{value: value}, env} -> {value, env}
       other -> other
     end)
   end
 
-  defp eval_block_statement(%Ast.BlockStatement{statements: statements}) do
-    for statement <- statements, reduce: nil do
-      %Object.ReturnValue{} = result ->
+  defp eval_block_statement(%Ast.BlockStatement{statements: statements}, env) do
+    for statement <- statements, reduce: {nil, env} do
+      {%Object.ReturnValue{}, _} = result ->
         result
 
-      %Object.Error{} = result ->
+      {%Object.Error{}, _} = result ->
         result
 
-      _ ->
-        run(statement)
+      {_, env} ->
+        run(statement, env)
     end
+    |> then(fn
+      {_, _} = ret -> ret
+      ret -> {ret, env}
+    end)
   end
 
   defp eval_prefix_expression(operator, right) do
@@ -189,26 +209,42 @@ defmodule Monkey.Evaluator do
     end
   end
 
-  defp eval_if_expression(%Ast.IfExpression{
-         condition: condition,
-         consequence: consequence,
-         alternative: alternative
-       }) do
-    condition = run(condition)
+  defp eval_if_expression(
+         %Ast.IfExpression{
+           condition: condition,
+           consequence: consequence,
+           alternative: alternative
+         },
+         env
+       ) do
+    {condition, env} = run(condition, env)
 
     cond do
       error?(condition) ->
-        condition
+        {condition, env}
 
       truthy?(condition) ->
-        run(consequence)
+        run(consequence, env)
 
       alternative != nil ->
-        run(alternative)
+        run(alternative, env)
 
       true ->
-        @null_object
+        {@null_object, env}
     end
+  end
+
+  defp eval_identifier(%Ast.Identifier{} = identifier, %Environment{} = env) do
+    v =
+      case Environment.get(env, identifier.value) do
+        {:ok, val} ->
+          val
+
+        :error ->
+          %Object.Error{message: "identifier not found: #{identifier.value}"}
+      end
+
+    {v, env}
   end
 
   defp native_boolean_to_boolean_object(true), do: @true_object
@@ -218,6 +254,10 @@ defmodule Monkey.Evaluator do
   defp truthy?(@true_object), do: true
   defp truthy?(@false_object), do: false
   defp truthy?(_), do: true
+
+  defp error?({obj, _env}) do
+    error?(obj)
+  end
 
   defp error?(nil) do
     false

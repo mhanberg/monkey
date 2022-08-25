@@ -2,16 +2,17 @@ defmodule Monkey.Repl do
   alias Monkey.Lexer
   alias Monkey.Parser
   alias Monkey.Evaluator
+  alias Monkey.Environment
 
   require Logger
 
   @prompt ">> "
 
   def start() do
-    read()
+    read(Environment.new())
   end
 
-  defp read() do
+  defp read(env) do
     line = IO.gets(@prompt)
 
     parser =
@@ -21,22 +22,26 @@ defmodule Monkey.Repl do
 
     {_parser, program} = Parser.parse_program(parser)
 
-    if length(parser.errors) > 0 do
-      message = """
-      Parsing errors:
+    env =
+      if length(parser.errors) > 0 do
+        message = """
+        Parsing errors:
 
-      #{Enum.join(parser.errors, "\n")}
-      """
+        #{Enum.join(parser.errors, "\n")}
+        """
 
-      Logger.error(message)
-    else
-      evaluated = Evaluator.run(program)
+        Logger.error(message)
+        env
+      else
+        {evaluated, env} = Evaluator.run(program, env)
 
-      if evaluated do
-        IO.puts(Monkey.Object.Obj.inspect(evaluated))
+        if evaluated do
+          IO.puts(Monkey.Object.Obj.inspect(evaluated))
+        end
+
+        env
       end
-    end
 
-    read()
+    read(env)
   end
 end

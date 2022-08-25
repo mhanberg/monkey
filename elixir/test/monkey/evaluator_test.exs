@@ -5,6 +5,7 @@ defmodule Monkey.EvaluatorTest do
   alias Monkey.Lexer
   alias Monkey.Object
   alias Monkey.Parser
+  alias Monkey.Environment
 
   test "eval integer expression" do
     tests = [
@@ -145,13 +146,27 @@ defmodule Monkey.EvaluatorTest do
         }
         """,
         "unknown operator: BOOLEAN + BOOLEAN"
-      }
+      },
+      {"foobar", "identifier not found: foobar"}
     ]
 
     for {input, expected} <- tests do
       evaluated = test_eval(input)
       assert %Object.Error{message: message} = evaluated
       assert expected == message
+    end
+  end
+
+  test "let statement" do
+    tests = [
+      {"let a = 5; a;", 5},
+      {"let a = 5 * 5; a;", 25},
+      {"let a = 5; let b = a; b;", 5},
+      {"let a = 5; let b = a; let c = a + b + 5; c;", 15}
+    ]
+
+    for {input, expected} <- tests do
+      input |> test_eval() |> test_integer_object(expected)
     end
   end
 
@@ -173,6 +188,7 @@ defmodule Monkey.EvaluatorTest do
     |> Parser.new()
     |> Parser.parse_program()
     |> elem(1)
-    |> Evaluator.run()
+    |> Evaluator.run(Environment.new())
+    |> elem(0)
   end
 end
