@@ -33,6 +33,12 @@ defmodule Monkey.Evaluator do
         right = run(right)
         eval_infix_expression(operator, left, right)
 
+      %Ast.BlockStatement{statements: statements} ->
+        eval_statements(statements)
+
+      %Ast.IfExpression{} = if_expression ->
+        eval_if_expression(if_expression)
+
       _ ->
         @null_object
     end
@@ -133,6 +139,30 @@ defmodule Monkey.Evaluator do
     end
   end
 
+  defp eval_if_expression(%Ast.IfExpression{
+         condition: condition,
+         consequence: consequence,
+         alternative: alternative
+       }) do
+    condition = run(condition)
+
+    cond do
+      truthy?(condition) ->
+        run(consequence)
+
+      alternative != nil ->
+        run(alternative)
+
+      true ->
+        @null_object
+    end
+  end
+
   defp native_boolean_to_boolean_object(true), do: @true_object
   defp native_boolean_to_boolean_object(false), do: @false_object
+
+  defp truthy?(@null_object), do: false
+  defp truthy?(@true_object), do: true
+  defp truthy?(@false_object), do: false
+  defp truthy?(_), do: true
 end

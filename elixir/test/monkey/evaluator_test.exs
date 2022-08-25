@@ -76,12 +76,38 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "if else expressions" do
+    tests = [
+      {"if (true) { 10 }", 10},
+      {"if (false) { 10 }", nil},
+      {"if (1) { 10 }", 10},
+      {"if (1 < 2) { 10 }", 10},
+      {"if (1 > 2) { 10 }", nil},
+      {"if (1 > 2) { 10 } else { 20 }", 20},
+      {"if (1 < 2) { 10 } else { 20 }", 10}
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+
+      if is_integer(expected) do
+        test_integer_object(evaluated, expected)
+      else
+        test_null_object(evaluated)
+      end
+    end
+  end
+
   defp test_integer_object(evaluated, expected) do
     assert %Object.Integer{value: ^expected} = evaluated
   end
 
   defp test_boolean_object(evaluated, expected) do
     assert %Object.Boolean{value: ^expected} = evaluated
+  end
+
+  defp test_null_object(evaluated) do
+    assert %Object.Null{} = evaluated
   end
 
   defp test_eval(input) do
