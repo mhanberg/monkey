@@ -28,6 +28,11 @@ defmodule Monkey.Evaluator do
         right = run(right)
         eval_prefix_expression(operator, right)
 
+      %Ast.InfixExpression{left: left, right: right, operator: operator} ->
+        left = run(left)
+        right = run(right)
+        eval_infix_expression(operator, left, right)
+
       _ ->
         @null_object
     end
@@ -49,7 +54,18 @@ defmodule Monkey.Evaluator do
         eval_minus_prefix_operator(right)
 
       _ ->
-        nil
+        @null_object
+    end
+  end
+
+  defp eval_infix_expression(operator, left, right) do
+    cond do
+      Obj.type(left) == Object.types(:integer_obj) &&
+          Obj.type(right) == Object.types(:integer_obj) ->
+        eval_integer_infix_expression(operator, left, right)
+
+      true ->
+        @null_object
     end
   end
 
@@ -74,6 +90,18 @@ defmodule Monkey.Evaluator do
       @null_object
     else
       %Object.Integer{value: -right.value}
+    end
+  end
+
+  defp eval_integer_infix_expression(operator, left, right) do
+    left_val = left.value
+    right_val = right.value
+
+    case operator do
+      "+" -> %Object.Integer{value: left_val + right_val}
+      "-" -> %Object.Integer{value: left_val - right_val}
+      "*" -> %Object.Integer{value: left_val * right_val}
+      "/" -> %Object.Integer{value: div(left_val, right_val)}
     end
   end
 end
