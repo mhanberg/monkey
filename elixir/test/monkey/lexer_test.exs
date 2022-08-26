@@ -64,6 +64,7 @@ defmodule Monkey.LexerTest do
 
 
       "and then i go to the zoo and take a picture of the lion's tail"
+      ""
       """
 
       tests = [
@@ -143,6 +144,7 @@ defmodule Monkey.LexerTest do
         {@tokens.string, "foobar"},
         {@tokens.string, "foo bar"},
         {@tokens.string, "and then i go to the zoo and take a picture of the lion's tail"},
+        {@tokens.string, ""},
         {@tokens.eof, ""}
       ]
 

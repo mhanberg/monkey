@@ -145,6 +145,30 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "builtin functions" do
+    tests = [
+      {~M|len("")|, 0},
+      {~M|len("four")|, 4},
+      {~M|len("hello world")|, 11},
+      {~M|len(1)|, "argument to `len` not supported, got INTEGER"},
+      {~M|len("one", "two")|, "wrong number of arguments. got=2, want=1"}
+      # {~M|len([1, 2, 3])|, 3},
+      # {~M|len([])|, 0}
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+
+      cond do
+        is_integer(expected) ->
+          test_integer_object(evaluated, expected)
+
+        is_binary(expected) ->
+          assert %Object.Error{message: ^expected} = evaluated
+      end
+    end
+  end
+
   test "error handling" do
     tests = [
       {~M"5 + true;", "type mismatch: INTEGER + BOOLEAN"},

@@ -8,7 +8,8 @@ defmodule Monkey.Object do
     null_obj: "NULL",
     return_value_obj: "RETURN_VALUE",
     error_obj: "ERROR",
-    string_obj: "STRING"
+    string_obj: "STRING",
+    builtin_obj: "BUILTIN"
   }
 
   def types() do
@@ -112,6 +113,20 @@ defmodule Monkey.Object do
           )
 
         "fn(#{parameters}) {\n#{Monkey.Ast.Node.string(object.body)}\n}"
+      end
+    end
+  end
+
+  defmodule BuiltinFunction do
+    defstruct [:func]
+
+    defimpl Obj do
+      def type(_) do
+        Monkey.Object.types(:builtin_obj)
+      end
+
+      def inspect(object) do
+        "builtin function"
       end
     end
   end

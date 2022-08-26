@@ -2,6 +2,7 @@ defmodule Monkey.Evaluator do
   alias Monkey.Ast
   alias Monkey.Object
   alias Monkey.Environment
+  alias Monkey.Builtins
   alias Monkey.Object.Obj
 
   @null_object %Object.Null{}
@@ -267,12 +268,18 @@ defmodule Monkey.Evaluator do
   end
 
   defp eval_identifier(%Ast.Identifier{} = identifier, %Environment{} = env) do
+    maybe_env_val = Environment.get(env, identifier.value)
+
     v =
-      case Environment.get(env, identifier.value) do
-        {:ok, val} ->
+      cond do
+        match?({:ok, _val}, maybe_env_val) ->
+          {:ok, val} = maybe_env_val
           val
 
-        :error ->
+        builtin = Builtins.funcs(identifier.value) ->
+          builtin
+
+        true ->
           %Object.Error{message: "identifier not found: #{identifier.value}"}
       end
 
@@ -303,6 +310,14 @@ defmodule Monkey.Evaluator do
     {evaluated, _env} = run(function.body, extended_env)
 
     unwrap_return_value(evaluated)
+  end
+
+  defp apply_function(%Object.BuiltinFunction{func: func}, args) do
+    apply(func, [args])
+  end
+
+  defp apply_function(object, _args) do
+    %Object.Error{message: "not a function: #{Obj.type(object)}"}
   end
 
   defp extend_function_env(function, args) do
