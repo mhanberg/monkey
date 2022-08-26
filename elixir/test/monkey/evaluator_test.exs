@@ -34,6 +34,13 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "string literals" do
+    input = ~M|"Hello World!"|
+
+    evaluated = test_eval(input)
+    assert %Object.String{value: "Hello World!"} = evaluated
+  end
+
   test "boolean expressions" do
     tests = [
       {~M"true", true},

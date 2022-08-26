@@ -66,7 +66,8 @@ defmodule Monkey.Parser do
         @token_false => &parse_boolean/1,
         @token_lparen => &parse_grouped_expression/1,
         @token_if => &parse_if_expression/1,
-        @token_function => &parse_function_literal/1
+        @token_function => &parse_function_literal/1,
+        @token_string => &parse_string_literal/1
       },
       infix_parse_functions: %{
         @token_eq => &parse_infix_expression/2,
@@ -536,6 +537,10 @@ defmodule Monkey.Parser do
         end
       end
     end
+  end
+
+  defp parse_string_literal(%__MODULE__{} = parser) do
+    {parser, %Ast.StringLiteral{token: parser.current_token, value: parser.current_token.literal}}
   end
 
   def peek_error(%__MODULE__{} = parser, token_type) do

@@ -105,6 +105,10 @@ defmodule Monkey.Lexer do
       "}" ->
         Token.new(@tokens.rbrace, lexer.char)
 
+      ~s|"| ->
+        {lexer, literal} = read_string(lexer)
+        {lexer, Token.new(@tokens.string, literal), :read_next}
+
       0 ->
         Token.new(@tokens.eof, "")
 
@@ -177,6 +181,24 @@ defmodule Monkey.Lexer do
     lexer = read_letters(lexer)
 
     {lexer, String.slice(lexer.input, position..(lexer.position - 1))}
+  end
+
+  def read_string(%__MODULE__{} = lexer) do
+    position = lexer.position + 1
+
+    lexer = eat_until_quote_or_eof(lexer)
+
+    {lexer, String.slice(lexer.input, position..(lexer.position - 1))}
+  end
+
+  defp eat_until_quote_or_eof(%__MODULE__{} = lexer) do
+    lexer = read_char(lexer)
+
+    if lexer.char == ~s|"| || lexer.char == 0 do
+      lexer
+    else
+      eat_until_quote_or_eof(lexer)
+    end
   end
 
   defp read_letters(%__MODULE__{char: char} = lexer) when is_letter(char) do

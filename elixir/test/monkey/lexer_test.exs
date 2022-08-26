@@ -58,6 +58,12 @@ defmodule Monkey.LexerTest do
 
       10 == 10;
       10 != 9;
+
+      "foobar"
+      "foo bar"
+
+
+      "and then i go to the zoo and take a picture of the lion's tail"
       """
 
       tests = [
@@ -134,6 +140,9 @@ defmodule Monkey.LexerTest do
         {@tokens.not_eq, "!="},
         {@tokens.int, "9"},
         {@tokens.semicolon, ";"},
+        {@tokens.string, "foobar"},
+        {@tokens.string, "foo bar"},
+        {@tokens.string, "and then i go to the zoo and take a picture of the lion's tail"},
         {@tokens.eof, ""}
       ]
 

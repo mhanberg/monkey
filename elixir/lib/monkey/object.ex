@@ -7,7 +7,8 @@ defmodule Monkey.Object do
     boolean_obj: "BOOLEAN",
     null_obj: "NULL",
     return_value_obj: "RETURN_VALUE",
-    error_obj: "ERROR"
+    error_obj: "ERROR",
+    string_obj: "STRING"
   }
 
   def types() do
@@ -33,6 +34,20 @@ defmodule Monkey.Object do
 
       def inspect(object) do
         Elixir.Integer.to_string(object.value)
+      end
+    end
+  end
+
+  defmodule String do
+    defstruct [:value]
+
+    defimpl Obj do
+      def type(_) do
+        Monkey.Object.types(:string_obj)
+      end
+
+      def inspect(object) do
+        object.value
       end
     end
   end

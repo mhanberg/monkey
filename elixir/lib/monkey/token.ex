@@ -43,7 +43,8 @@ defmodule Monkey.Token do
     false: "FALSE",
     if: "IF",
     else: "ELSE",
-    return: "RETURN"
+    return: "RETURN",
+    string: "STRING"
   }
 
   @keywords %{

@@ -346,6 +346,21 @@ defmodule Monkey.ParserTest do
            ] = program.statements
   end
 
+  @tag input: ~M|"hello world";|
+  test "string literals", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.StringLiteral{
+                 value: "hello world"
+               }
+             }
+           ] = program.statements
+  end
+
   defp assert_parse_errors(parser) do
     assert length(parser.errors) == 0, Enum.join(parser.errors, "\n")
   end

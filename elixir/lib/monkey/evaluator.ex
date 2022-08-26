@@ -49,6 +49,9 @@ defmodule Monkey.Evaluator do
       %Ast.IntegerLiteral{value: value} ->
         {%Object.Integer{value: value}, env}
 
+      %Ast.StringLiteral{value: value} ->
+        {%Object.String{value: value}, env}
+
       %Ast.Boolean{value: true} ->
         {@true_object, env}
 
@@ -289,10 +292,6 @@ defmodule Monkey.Evaluator do
     {evaluated, _env} = run(function.body, extended_env)
 
     unwrap_return_value(evaluated)
-  end
-
-  defp apply_function(function, _args, env) do
-    {%Object.Error{message: "not a function: #{Obj.type(function)}"}, env}
   end
 
   defp extend_function_env(function, args) do
