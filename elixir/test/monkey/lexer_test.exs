@@ -4,11 +4,13 @@ defmodule Monkey.LexerTest do
   alias Monkey.Lexer
   alias Monkey.Token
 
+  import Monkey.Support.Utils
+
   @tokens Token.tokens()
 
   describe "next_token" do
     test "random tokens" do
-      input = "=+(){},;"
+      input = ~M"=+(){},;"
 
       tests = [
         {@tokens.assign, "="},
@@ -36,7 +38,7 @@ defmodule Monkey.LexerTest do
     end
 
     test "monkey source code" do
-      input = """
+      input = ~M"""
       let five = 5;
       let ten = 10;
 

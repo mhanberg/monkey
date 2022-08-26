@@ -5,13 +5,15 @@ defmodule Monkey.ParserTest do
   alias Monkey.Parser
   alias Monkey.Ast
 
+  import Monkey.Support.Utils
+
   setup :lex_and_parse
 
   test "let statements" do
     tests = [
-      {"let x = 5;", "x", 5},
-      {"let y = true;", "y", true},
-      {"let foobar = y;", "foobar", "y"}
+      {~M"let x = 5;", "x", 5},
+      {~M"let y = true;", "y", true},
+      {~M"let foobar = y;", "foobar", "y"}
     ]
 
     for {input, expected_identifier, expected_value} <- tests do
@@ -34,9 +36,9 @@ defmodule Monkey.ParserTest do
 
   test "return statements" do
     tests = [
-      {"return 5;", 5},
-      {"return true;", true},
-      {"return foobar;", "foobar"}
+      {~M"return 5;", 5},
+      {~M"return true;", true},
+      {~M"return foobar;", "foobar"}
     ]
 
     for {input, expected_value} <- tests do
@@ -86,8 +88,8 @@ defmodule Monkey.ParserTest do
 
   test "prefix expression" do
     tests = [
-      {"!5;", "!", 5},
-      {"-15;", "-", 15}
+      {~M"!5;", "!", 5},
+      {~M"-15;", "-", 15}
     ]
 
     for {input, operator, value} <- tests do
@@ -114,17 +116,17 @@ defmodule Monkey.ParserTest do
 
   test "infix expression" do
     tests = [
-      {"5 + 5;", 5, "+", 5, Ast.IntegerLiteral},
-      {"5 - 5;", 5, "-", 5, Ast.IntegerLiteral},
-      {"5 * 5;", 5, "*", 5, Ast.IntegerLiteral},
-      {"5 / 5;", 5, "/", 5, Ast.IntegerLiteral},
-      {"5 > 5;", 5, ">", 5, Ast.IntegerLiteral},
-      {"5 < 5;", 5, "<", 5, Ast.IntegerLiteral},
-      {"5 == 5;", 5, "==", 5, Ast.IntegerLiteral},
-      {"5 != 5;", 5, "!=", 5, Ast.IntegerLiteral},
-      {"true == true", true, "==", true, Ast.Boolean},
-      {"true != false", true, "!=", false, Ast.Boolean},
-      {"false == false", false, "==", false, Ast.Boolean}
+      {~M"5 + 5;", 5, "+", 5, Ast.IntegerLiteral},
+      {~M"5 - 5;", 5, "-", 5, Ast.IntegerLiteral},
+      {~M"5 * 5;", 5, "*", 5, Ast.IntegerLiteral},
+      {~M"5 / 5;", 5, "/", 5, Ast.IntegerLiteral},
+      {~M"5 > 5;", 5, ">", 5, Ast.IntegerLiteral},
+      {~M"5 < 5;", 5, "<", 5, Ast.IntegerLiteral},
+      {~M"5 == 5;", 5, "==", 5, Ast.IntegerLiteral},
+      {~M"5 != 5;", 5, "!=", 5, Ast.IntegerLiteral},
+      {~M"true == true", true, "==", true, Ast.Boolean},
+      {~M"true != false", true, "!=", false, Ast.Boolean},
+      {~M"false == false", false, "==", false, Ast.Boolean}
     ]
 
     for {input, left_value, operator, right_value, struct} <- tests do
@@ -153,31 +155,31 @@ defmodule Monkey.ParserTest do
 
   test "operator precedence parsing" do
     tests = [
-      {"-a * b", "((-a) * b)"},
-      {"!-a", "(!(-a))"},
-      {"a + b + c", "((a + b) + c)"},
-      {"a + b - c", "((a + b) - c)"},
-      {"a * b * c", "((a * b) * c)"},
-      {"a * b / c", "((a * b) / c)"},
-      {"a + b / c", "(a + (b / c))"},
-      {"a + b * c + d / e - f", "(((a + (b * c)) + (d / e)) - f)"},
-      {"3 + 4; -5 * 5", "(3 + 4)((-5) * 5)"},
-      {"5 > 4 == 3 < 4", "((5 > 4) == (3 < 4))"},
-      {"5 < 4 != 3 > 4", "((5 < 4) != (3 > 4))"},
-      {"3 + 4 * 5 == 3 * 1 + 4 * 5", "((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
-      {"true", "true"},
-      {"false", "false"},
-      {"3 > 5 == false", "((3 > 5) == false)"},
-      {"3 < 5 == true", "((3 < 5) == true)"},
-      {"1 + (2 + 3) + 4", "((1 + (2 + 3)) + 4)"},
-      {"(5 + 5) * 2", "((5 + 5) * 2)"},
-      {"2 / (5 + 5)", "(2 / (5 + 5))"},
-      {"(5 + 5) * 2 * (5 + 5)", "(((5 + 5) * 2) * (5 + 5))"},
-      {"-(5 + 5)", "(-(5 + 5))"},
-      {"a + add(b * c) + d", "((a + add((b * c))) + d)"},
-      {"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
-       "add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-      {"add(a + b + c * d / f + g)", "add((((a + b) + ((c * d) / f)) + g))"}
+      {~M"-a * b", ~M"((-a) * b)"},
+      {~M"!-a", ~M"(!(-a))"},
+      {~M"a + b + c", ~M"((a + b) + c)"},
+      {~M"a + b - c", ~M"((a + b) - c)"},
+      {~M"a * b * c", ~M"((a * b) * c)"},
+      {~M"a * b / c", ~M"((a * b) / c)"},
+      {~M"a + b / c", ~M"(a + (b / c))"},
+      {~M"a + b * c + d / e - f", ~M"(((a + (b * c)) + (d / e)) - f)"},
+      {~M"3 + 4; -5 * 5", ~M"(3 + 4)((-5) * 5)"},
+      {~M"5 > 4 == 3 < 4", ~M"((5 > 4) == (3 < 4))"},
+      {~M"5 < 4 != 3 > 4", ~M"((5 < 4) != (3 > 4))"},
+      {~M"3 + 4 * 5 == 3 * 1 + 4 * 5", ~M"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))"},
+      {~M"true", ~M"true"},
+      {~M"false", ~M"false"},
+      {~M"3 > 5 == false", ~M"((3 > 5) == false)"},
+      {~M"3 < 5 == true", ~M"((3 < 5) == true)"},
+      {~M"1 + (2 + 3) + 4", ~M"((1 + (2 + 3)) + 4)"},
+      {~M"(5 + 5) * 2", ~M"((5 + 5) * 2)"},
+      {~M"2 / (5 + 5)", ~M"(2 / (5 + 5))"},
+      {~M"(5 + 5) * 2 * (5 + 5)", ~M"(((5 + 5) * 2) * (5 + 5))"},
+      {~M"-(5 + 5)", ~M"(-(5 + 5))"},
+      {~M"a + add(b * c) + d", ~M"((a + add((b * c))) + d)"},
+      {~M"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
+       ~M"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
+      {~M"add(a + b + c * d / f + g)", ~M"add((((a + b) + ((c * d) / f)) + g))"}
     ]
 
     for {input, expected} <- tests do
@@ -191,7 +193,7 @@ defmodule Monkey.ParserTest do
     end
   end
 
-  @tag input: "if (x < y) { x }"
+  @tag input: ~M"if (x < y) { x }"
   test "if experssion", %{parser: parser, program: program} do
     assert_parse_errors(parser)
 
@@ -220,7 +222,7 @@ defmodule Monkey.ParserTest do
            ] = program.statements
   end
 
-  @tag input: "if (x < y) { x } else { y }"
+  @tag input: ~M"if (x < y) { x } else { y }"
   test "if else experssion", %{parser: parser, program: program} do
     assert_parse_errors(parser)
 
@@ -257,7 +259,7 @@ defmodule Monkey.ParserTest do
            ] = program.statements
   end
 
-  @tag input: "fn(x, y) { x + y; }"
+  @tag input: ~M"fn(x, y) { x + y; }"
   test "function literal", %{parser: parser, program: program} do
     assert_parse_errors(parser)
 
@@ -288,9 +290,9 @@ defmodule Monkey.ParserTest do
 
   test "function parameter parsing" do
     tests = [
-      {"fn() {};", []},
-      {"fn(x) {};", ["x"]},
-      {"fn(x, y, z) {};", ["x", "y", "z"]}
+      {~M"fn() {};", []},
+      {~M"fn(x) {};", ["x"]},
+      {~M"fn(x, y, z) {};", ["x", "y", "z"]}
     ]
 
     for {input, expected} <- tests do
@@ -316,7 +318,7 @@ defmodule Monkey.ParserTest do
     end
   end
 
-  @tag input: "add(1, 2 * 3, 4 + 5);"
+  @tag input: ~M"add(1, 2 * 3, 4 + 5);"
   test "parsing call experssions", %{parser: parser, program: program} do
     assert_parse_errors(parser)
 

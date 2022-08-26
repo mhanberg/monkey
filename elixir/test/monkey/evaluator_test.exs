@@ -7,23 +7,25 @@ defmodule Monkey.EvaluatorTest do
   alias Monkey.Parser
   alias Monkey.Environment
 
+  import Monkey.Support.Utils
+
   test "eval integer expression" do
     tests = [
-      {"5", 5},
-      {"10", 10},
-      {"-5", -5},
-      {"-10", -10},
-      {"5 + 5 + 5 + 5 - 10", 10},
-      {"2 * 2 * 2 * 2 * 2", 32},
-      {"-50 + 100 + -50", 0},
-      {"5 * 2 + 10", 20},
-      {"5 + 2 * 10", 25},
-      {"20 + 2 * -10", 0},
-      {"50 / 2 * 2 + 10", 60},
-      {"2 * (5 + 10)", 30},
-      {"3 * 3 * 3 + 10", 37},
-      {"3 * (3 * 3) + 10", 37},
-      {"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50}
+      {~M"5", 5},
+      {~M"10", 10},
+      {~M"-5", -5},
+      {~M"-10", -10},
+      {~M"5 + 5 + 5 + 5 - 10", 10},
+      {~M"2 * 2 * 2 * 2 * 2", 32},
+      {~M"-50 + 100 + -50", 0},
+      {~M"5 * 2 + 10", 20},
+      {~M"5 + 2 * 10", 25},
+      {~M"20 + 2 * -10", 0},
+      {~M"50 / 2 * 2 + 10", 60},
+      {~M"2 * (5 + 10)", 30},
+      {~M"3 * 3 * 3 + 10", 37},
+      {~M"3 * (3 * 3) + 10", 37},
+      {~M"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50}
     ]
 
     for {input, expected} <- tests do
@@ -34,25 +36,25 @@ defmodule Monkey.EvaluatorTest do
 
   test "boolean expressions" do
     tests = [
-      {"true", true},
-      {"false", false},
-      {"1 < 2", true},
-      {"1 > 2", false},
-      {"1 < 1", false},
-      {"1 > 1", false},
-      {"1 == 1", true},
-      {"1 != 1", false},
-      {"1 == 2", false},
-      {"1 != 2", true},
-      {"true == true", true},
-      {"false == false", true},
-      {"true == false", false},
-      {"true != false", true},
-      {"false != true", true},
-      {"(1 < 2) == true", true},
-      {"(1 < 2) == false", false},
-      {"(1 > 2) == true", false},
-      {"(1 > 2) == false", true}
+      {~M"true", true},
+      {~M"false", false},
+      {~M"1 < 2", true},
+      {~M"1 > 2", false},
+      {~M"1 < 1", false},
+      {~M"1 > 1", false},
+      {~M"1 == 1", true},
+      {~M"1 != 1", false},
+      {~M"1 == 2", false},
+      {~M"1 != 2", true},
+      {~M"true == true", true},
+      {~M"false == false", true},
+      {~M"true == false", false},
+      {~M"true != false", true},
+      {~M"false != true", true},
+      {~M"(1 < 2) == true", true},
+      {~M"(1 < 2) == false", false},
+      {~M"(1 > 2) == true", false},
+      {~M"(1 > 2) == false", true}
     ]
 
     for {input, expected} <- tests do
@@ -63,12 +65,12 @@ defmodule Monkey.EvaluatorTest do
 
   test "bang operator" do
     tests = [
-      {"!true", false},
-      {"!false", true},
-      {"!5", false},
-      {"!!true", true},
-      {"!!false", false},
-      {"!!5", true}
+      {~M"!true", false},
+      {~M"!false", true},
+      {~M"!5", false},
+      {~M"!!true", true},
+      {~M"!!false", false},
+      {~M"!!5", true}
     ]
 
     for {input, expected} <- tests do
@@ -79,13 +81,13 @@ defmodule Monkey.EvaluatorTest do
 
   test "if else expressions" do
     tests = [
-      {"if (true) { 10 }", 10},
-      {"if (false) { 10 }", nil},
-      {"if (1) { 10 }", 10},
-      {"if (1 < 2) { 10 }", 10},
-      {"if (1 > 2) { 10 }", nil},
-      {"if (1 > 2) { 10 } else { 20 }", 20},
-      {"if (1 < 2) { 10 } else { 20 }", 10}
+      {~M"if (true) { 10 }", 10},
+      {~M"if (false) { 10 }", nil},
+      {~M"if (1) { 10 }", 10},
+      {~M"if (1 < 2) { 10 }", 10},
+      {~M"if (1 > 2) { 10 }", nil},
+      {~M"if (1 > 2) { 10 } else { 20 }", 20},
+      {~M"if (1 < 2) { 10 } else { 20 }", 10}
     ]
 
     for {input, expected} <- tests do
@@ -101,13 +103,16 @@ defmodule Monkey.EvaluatorTest do
 
   test "return statement" do
     tests = [
-      {"return 10;", 10},
-      {"return 10; 9;", 10},
-      {"return 2 * 5; 9;", 10},
-      {"9; return 2 * 5; 9;", 10},
-      {"if (10 > 1) { return 10; }", 10},
+      {~M"return 10;", 10},
+      {~M"return 10; 9;", 10},
+      {~M"return 2 * 5; 9;", 10},
+      {~M"9; return 2 * 5; 9;", 10},
       {
-        """
+        ~M"if (10 > 1) { return 10; }",
+        10
+      },
+      {
+        ~M"""
         if (10 > 1) {
           if (10 > 1) {
             return 10;
@@ -128,15 +133,15 @@ defmodule Monkey.EvaluatorTest do
 
   test "error handling" do
     tests = [
-      {"5 + true;", "type mismatch: INTEGER + BOOLEAN"},
-      {"5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"},
-      {"-true", "unknown operator: -BOOLEAN"},
-      {"true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
-      {"true + false + true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
-      {"5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"},
-      {"if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN"},
+      {~M"5 + true;", "type mismatch: INTEGER + BOOLEAN"},
+      {~M"5 + true; 5;", "type mismatch: INTEGER + BOOLEAN"},
+      {~M"-true", "unknown operator: -BOOLEAN"},
+      {~M"true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
+      {~M"true + false + true + false;", "unknown operator: BOOLEAN + BOOLEAN"},
+      {~M"5; true + false; 5", "unknown operator: BOOLEAN + BOOLEAN"},
+      {~M"if (10 > 1) { true + false; }", "unknown operator: BOOLEAN + BOOLEAN"},
       {
-        """
+        ~M"""
         if (10 > 1) {
           if (10 > 1) {
             return true + false;
@@ -147,7 +152,7 @@ defmodule Monkey.EvaluatorTest do
         """,
         "unknown operator: BOOLEAN + BOOLEAN"
       },
-      {"foobar", "identifier not found: foobar"}
+      {~M"foobar", "identifier not found: foobar"}
     ]
 
     for {input, expected} <- tests do
@@ -159,10 +164,10 @@ defmodule Monkey.EvaluatorTest do
 
   test "let statement" do
     tests = [
-      {"let a = 5; a;", 5},
-      {"let a = 5 * 5; a;", 25},
-      {"let a = 5; let b = a; b;", 5},
-      {"let a = 5; let b = a; let c = a + b + 5; c;", 15}
+      {~M"let a = 5; a;", 5},
+      {~M"let a = 5 * 5; a;", 25},
+      {~M"let a = 5; let b = a; b;", 5},
+      {~M"let a = 5; let b = a; let c = a + b + 5; c;", 15}
     ]
 
     for {input, expected} <- tests do
@@ -171,7 +176,7 @@ defmodule Monkey.EvaluatorTest do
   end
 
   test "function statement" do
-    input = "fn(x) { x + 2; };"
+    input = ~M"fn(x) { x + 2; };"
 
     assert %Object.Function{
              parameters: [
@@ -180,18 +185,21 @@ defmodule Monkey.EvaluatorTest do
              body: body
            } = test_eval(input)
 
-    assert "x" == Monkey.Ast.Node.string(parameter)
-    assert "(x + 2)" == Monkey.Ast.Node.string(body)
+    assert ~M"x" == Monkey.Ast.Node.string(parameter)
+    assert ~M"(x + 2)" == Monkey.Ast.Node.string(body)
   end
 
   test "function application" do
     tests = [
-      {"let identity = fn(x) { x; }; identity(5);", 5},
-      {"let identity = fn(x) { return x; }; identity(5);", 5},
-      {"let double = fn(x) { x * 2; }; double(5);", 10},
-      {"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
-      {"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
-      {"fn(x) { x; }(5)", 5}
+      {~M"let identity = fn(x) { x; }; identity(5);", 5},
+      {~M"let identity = fn(x) { return x; }; identity(5);", 5},
+      {~M"let double = fn(x) { x * 2; }; double(5);", 10},
+      {~M"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+      {
+        ~M"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));",
+        20
+      },
+      {~M"fn(x) { x; }(5)", 5}
     ]
 
     for {input, expected} <- tests do
@@ -200,7 +208,7 @@ defmodule Monkey.EvaluatorTest do
   end
 
   test "closures" do
-    input = """
+    input = ~M"""
     let newAdder = fn(x) {
       fn(y) { x + y };
     };
