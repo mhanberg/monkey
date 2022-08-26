@@ -4,6 +4,7 @@ let add = fn(x, y) {
   } else {
     return 0;
   }
+
   return x + y;
 };
 

@@ -148,6 +148,28 @@ defmodule Monkey.Ast do
     end
   end
 
+  defmodule ArrayLiteral do
+    defstruct [:token, :values]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        trace "string/1 IntegerLiteral" do
+          "[" <> Enum.map_join(node.values, ", ", &Monkey.Ast.Node.string/1) <> "]"
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
   defmodule IntegerLiteral do
     defstruct [:token, :value]
 
