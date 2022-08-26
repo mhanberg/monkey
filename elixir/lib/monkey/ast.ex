@@ -170,6 +170,32 @@ defmodule Monkey.Ast do
     end
   end
 
+  defmodule IndexExpression do
+    defstruct [:token, :left, :index]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        trace "string/1 IndexExpression" do
+          "(" <>
+            Monkey.Ast.Node.string(node.left) <>
+            "[" <>
+            Monkey.Ast.Node.string(node.index) <>
+            "])"
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
   defmodule IntegerLiteral do
     defstruct [:token, :value]
 

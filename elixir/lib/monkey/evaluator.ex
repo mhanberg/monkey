@@ -35,6 +35,17 @@ defmodule Monkey.Evaluator do
           {%Object.Array{elements: elements}, env}
         end
 
+      %Ast.IndexExpression{left: left, index: index} ->
+        with {left, env} <- run(left, env),
+             {false, _} <- {error?(left), left},
+             {index, env} <- run(index, env),
+             {false, _} <- {error?(index), index} do
+          {eval_index_expression(left, index, env), env}
+        else
+          {true, error} ->
+            {error, env}
+        end
+
       %Ast.FunctionLiteral{parameters: parameters, body: body} ->
         {%Object.Function{parameters: parameters, body: body, env: env}, env}
 
@@ -183,6 +194,18 @@ defmodule Monkey.Evaluator do
     end
   end
 
+  defp eval_index_expression(left, index, _env) do
+    cond do
+      Obj.type(left) == Object.types(:array_obj) && Obj.type(index) == Object.types(:integer_obj) ->
+        eval_array_index_expression(left, index)
+
+      true ->
+        %Object.Error{
+          message: "index operator not supported for: #{Obj.type(left)}}"
+        }
+    end
+  end
+
   defp eval_bang_operator(right) do
     case right do
       @true_object ->
@@ -240,6 +263,18 @@ defmodule Monkey.Evaluator do
         %Object.Error{
           message: "unknown operator: #{Obj.type(left)} #{operator}#{Obj.type(right)}"
         }
+    end
+  end
+
+  defp eval_array_index_expression(left, index) do
+    elements = left.elements
+    idx = index.value
+    max = length(elements) - 1
+
+    if idx < 0 || idx > max do
+      @null_object
+    else
+      Enum.at(elements, index.value)
     end
   end
 

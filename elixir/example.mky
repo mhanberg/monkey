@@ -5,6 +5,10 @@ let add = fn(x, y) {
     return 0;
   }
 
+  "hello"
+
+  [one, two, 3, 2 / 1]
+
   return x + y;
 };
 

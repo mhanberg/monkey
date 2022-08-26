@@ -17,6 +17,7 @@ defmodule Monkey.Parser do
   @product 5
   @prefix 6
   @call 7
+  @index 8
 
   @precedences %{
     @token_eq => @equals,
@@ -27,7 +28,8 @@ defmodule Monkey.Parser do
     @token_minus => @sum,
     @token_slash => @product,
     @token_asterisk => @product,
-    @token_lparen => @call
+    @token_lparen => @call,
+    @token_lbracket => @index
   }
 
   @type prefix_parse_function :: (t() -> map())
@@ -79,7 +81,8 @@ defmodule Monkey.Parser do
         @token_minus => &parse_infix_expression/2,
         @token_slash => &parse_infix_expression/2,
         @token_asterisk => &parse_infix_expression/2,
-        @token_lparen => &parse_call_expression/2
+        @token_lparen => &parse_call_expression/2,
+        @token_lbracket => &parse_index_expression/2
       }
     }
     |> next_token()
@@ -578,6 +581,20 @@ defmodule Monkey.Parser do
             {parser, nil}
         end
       end
+    end
+  end
+
+  defp parse_index_expression(%__MODULE__{} = parser, expression) do
+    exp = %Ast.IndexExpression{token: parser.current_token, left: expression}
+    parser = next_token(parser)
+    {parser, index} = parse_expression(parser, @lowest)
+
+    case expect_peek(parser, @token_rbracket) do
+      {:ok, parser} ->
+        {parser, %{exp | index: index}}
+
+      :error ->
+        {parser, nil}
     end
   end
 

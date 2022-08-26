@@ -179,7 +179,12 @@ defmodule Monkey.ParserTest do
       {~M"a + add(b * c) + d", ~M"((a + add((b * c))) + d)"},
       {~M"add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))",
        ~M"add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))"},
-      {~M"add(a + b + c * d / f + g)", ~M"add((((a + b) + ((c * d) / f)) + g))"}
+      {~M"add(a + b + c * d / f + g)", ~M"add((((a + b) + ((c * d) / f)) + g))"},
+      {~M"a * [1, 2, 3, 4][b * c] * d", ~M"((a * ([1, 2, 3, 4][(b * c)])) * d)"},
+      {
+        ~M"add(a * b[2], b[1], 2 * [1, 2][1])",
+        ~M"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))"
+      }
     ]
 
     for {input, expected} <- tests do
@@ -374,6 +379,26 @@ defmodule Monkey.ParserTest do
                    %Ast.Identifier{value: "hello"},
                    %Ast.StringLiteral{value: "world"}
                  ]
+               }
+             }
+           ] = program.statements
+  end
+
+  @tag input: ~M|myArray[1 + 1];|
+  test "index expressions", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.IndexExpression{
+                 left: %Ast.Identifier{value: "myArray"},
+                 index: %Ast.InfixExpression{
+                   operator: "+",
+                   left: %Ast.IntegerLiteral{value: 1},
+                   right: %Ast.IntegerLiteral{value: 1}
+                 }
                }
              }
            ] = program.statements
