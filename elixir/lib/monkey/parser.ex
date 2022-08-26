@@ -555,7 +555,7 @@ defmodule Monkey.Parser do
       if is_peek_token?(parser, @token_rbracket) do
         parser = next_token(parser)
 
-        {parser, expressions}
+        {parser, %Ast.ArrayLiteral{token: token, values: expressions}}
       else
         parser = next_token(parser)
         {parser, expression} = parse_expression(parser, @lowest)

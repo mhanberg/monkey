@@ -66,6 +66,7 @@ defmodule Monkey.LexerTest do
       "and then i go to the zoo and take a picture of the lion's tail"
       ""
       [1, 2];
+      [];
       """
 
       tests = [
@@ -150,6 +151,9 @@ defmodule Monkey.LexerTest do
         {@tokens.int, "1"},
         {@tokens.comma, ","},
         {@tokens.int, "2"},
+        {@tokens.rbracket, "]"},
+        {@tokens.semicolon, ";"},
+        {@tokens.lbracket, "["},
         {@tokens.rbracket, "]"},
         {@tokens.semicolon, ";"},
         {@tokens.eof, ""}

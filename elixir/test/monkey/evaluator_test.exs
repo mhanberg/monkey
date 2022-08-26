@@ -156,6 +156,13 @@ defmodule Monkey.EvaluatorTest do
                %Object.Integer{value: 6}
              ]
            } = evaluated
+
+    input = ~M"[]"
+    evaluated = test_eval(input)
+
+    assert %Object.Array{
+             elements: []
+           } = evaluated
   end
 
   test "index expressions" do
@@ -189,9 +196,9 @@ defmodule Monkey.EvaluatorTest do
       {~M|len("four")|, 4},
       {~M|len("hello world")|, 11},
       {~M|len(1)|, "argument to `len` not supported, got INTEGER"},
-      {~M|len("one", "two")|, "wrong number of arguments. got=2, want=1"}
-      # {~M|len([1, 2, 3])|, 3},
-      # {~M|len([])|, 0}
+      {~M|len("one", "two")|, "wrong number of arguments. got=2, want=1"},
+      {~M|len([1, 2, 3])|, 3},
+      {~M|len([])|, 0}
     ]
 
     for {input, expected} <- tests do

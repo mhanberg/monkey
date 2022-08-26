@@ -22,6 +22,10 @@ defmodule Monkey.Builtins do
     %Object.Integer{value: String.length(string)}
   end
 
+  defp len(%Object.Array{elements: elements}) do
+    %Object.Integer{value: length(elements)}
+  end
+
   defp len(other) do
     %Object.Error{message: "argument to `len` not supported, got #{Obj.type(other)}"}
   end
