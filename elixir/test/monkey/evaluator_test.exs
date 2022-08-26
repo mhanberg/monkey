@@ -145,6 +145,19 @@ defmodule Monkey.EvaluatorTest do
     end
   end
 
+  test "arrays" do
+    input = ~M"[1, 2 * 2, 3 + 3]"
+    evaluated = test_eval(input)
+
+    assert %Object.Array{
+             elements: [
+               %Object.Integer{value: 1},
+               %Object.Integer{value: 4},
+               %Object.Integer{value: 6}
+             ]
+           } = evaluated
+  end
+
   test "builtin functions" do
     tests = [
       {~M|len("")|, 0},

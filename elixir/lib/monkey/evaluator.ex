@@ -26,6 +26,15 @@ defmodule Monkey.Evaluator do
       %Ast.Identifier{} = identifier ->
         eval_identifier(identifier, env)
 
+      %Ast.ArrayLiteral{values: values} ->
+        {elements, env} = eval_expressions(values, env)
+
+        if length(elements) == 1 && error?(List.first(elements)) do
+          {List.first(elements), env}
+        else
+          {%Object.Array{elements: elements}, env}
+        end
+
       %Ast.FunctionLiteral{parameters: parameters, body: body} ->
         {%Object.Function{parameters: parameters, body: body, env: env}, env}
 

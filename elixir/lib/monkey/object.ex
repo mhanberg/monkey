@@ -9,6 +9,7 @@ defmodule Monkey.Object do
     return_value_obj: "RETURN_VALUE",
     error_obj: "ERROR",
     string_obj: "STRING",
+    array_obj: "ARRAY",
     builtin_obj: "BUILTIN"
   }
 
@@ -49,6 +50,20 @@ defmodule Monkey.Object do
 
       def inspect(object) do
         object.value
+      end
+    end
+  end
+
+  defmodule Array do
+    defstruct [:elements]
+
+    defimpl Obj do
+      def type(_) do
+        Monkey.Object.types(:array_obj)
+      end
+
+      def inspect(object) do
+        "[" <> Enum.map_join(object.elements, ", ", &Obj.inspect/1) <> "]"
       end
     end
   end
