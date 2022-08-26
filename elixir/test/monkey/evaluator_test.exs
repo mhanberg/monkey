@@ -41,6 +41,13 @@ defmodule Monkey.EvaluatorTest do
     assert %Object.String{value: "Hello World!"} = evaluated
   end
 
+  test "string concatenation" do
+    input = ~M|"Hello" + " " + "World!"|
+
+    evaluated = test_eval(input)
+    assert %Object.String{value: "Hello World!"} = evaluated
+  end
+
   test "boolean expressions" do
     tests = [
       {~M"true", true},
@@ -159,7 +166,8 @@ defmodule Monkey.EvaluatorTest do
         """,
         "unknown operator: BOOLEAN + BOOLEAN"
       },
-      {~M"foobar", "identifier not found: foobar"}
+      {~M"foobar", "identifier not found: foobar"},
+      {~M|"Hello" - "World"|, "unknown operator: STRING - STRING"}
     ]
 
     for {input, expected} <- tests do

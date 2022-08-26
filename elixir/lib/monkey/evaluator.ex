@@ -154,6 +154,9 @@ defmodule Monkey.Evaluator do
           Obj.type(right) == Object.types(:integer_obj) ->
         eval_integer_infix_expression(operator, left, right)
 
+      Obj.type(left) == Object.types(:string_obj) && Obj.type(right) == Object.types(:string_obj) ->
+        eval_string_infix_expression(operator, left, right)
+
       operator == "==" ->
         native_boolean_to_boolean_object(left == right)
 
@@ -227,6 +230,14 @@ defmodule Monkey.Evaluator do
         %Object.Error{
           message: "unknown operator: #{Obj.type(left)} #{operator}#{Obj.type(right)}"
         }
+    end
+  end
+
+  defp eval_string_infix_expression(operator, left, right) do
+    if operator != "+" do
+      %Object.Error{message: "unknown operator: #{Obj.type(left)} #{operator} #{Obj.type(right)}"}
+    else
+      %Object.String{value: left.value <> right.value}
     end
   end
 
