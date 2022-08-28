@@ -67,6 +67,7 @@ defmodule Monkey.LexerTest do
       ""
       [1, 2];
       [];
+      {"foo": "bar"}
       """
 
       tests = [
@@ -156,6 +157,11 @@ defmodule Monkey.LexerTest do
         {@tokens.lbracket, "["},
         {@tokens.rbracket, "]"},
         {@tokens.semicolon, ";"},
+        {@tokens.lbrace, "{"},
+        {@tokens.string, "foo"},
+        {@tokens.colon, ":"},
+        {@tokens.string, "bar"},
+        {@tokens.rbrace, "}"},
         {@tokens.eof, ""}
       ]
 

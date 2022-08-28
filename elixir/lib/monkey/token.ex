@@ -37,6 +37,7 @@ defmodule Monkey.Token do
     rbrace: "}",
     lbracket: "[",
     rbracket: "]",
+    colon: ":",
 
     # keywords
     function: "FUNCTION",

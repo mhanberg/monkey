@@ -157,8 +157,35 @@ defmodule Monkey.Ast do
       end
 
       def string(node) do
-        trace "string/1 IntegerLiteral" do
+        trace "string/1 ArrayLiteral" do
           "[" <> Enum.map_join(node.values, ", ", &Monkey.Ast.Node.string/1) <> "]"
+        end
+      end
+    end
+
+    defimpl Monkey.Ast.Expression do
+      def expression_node(_expression) do
+        nil
+      end
+    end
+  end
+
+  defmodule HashLiteral do
+    defstruct [:token, :pairs]
+
+    defimpl Monkey.Ast.Node do
+      def token_literal(node) do
+        node.token.literal
+      end
+
+      def string(node) do
+        trace "string/1 HashLiteral" do
+          pairs =
+            for {k, v} <- node.pairs do
+              ~s|"#{Monkey.Ast.Node.string(k)}": #{Monkey.Ast.Node.string(v)}|
+            end
+
+          "{" <> Enum.join(pairs, ", ") <> "}"
         end
       end
     end

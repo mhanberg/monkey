@@ -6,7 +6,7 @@ defmodule Monkey.Builtins do
     %{
       "len" => %Object.BuiltinFunction{
         func: fn args -> ensure_arg_count(&len/1, args, 1) end
-      }
+      },
     }[key]
   end
 

@@ -111,6 +111,9 @@ defmodule Monkey.Lexer do
       "]" ->
         Token.new(@tokens.rbracket, lexer.char)
 
+      ":" ->
+        Token.new(@tokens.colon, lexer.char)
+
       ~s|"| ->
         {lexer, literal} = read_string(lexer)
         {lexer, Token.new(@tokens.string, literal), :read_next}

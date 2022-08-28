@@ -4,6 +4,7 @@ defmodule Monkey.ParserTest do
   alias Monkey.Lexer
   alias Monkey.Parser
   alias Monkey.Ast
+  alias Monkey.Token
 
   import Monkey.Support.Utils
 
@@ -398,6 +399,45 @@ defmodule Monkey.ParserTest do
                    operator: "+",
                    left: %Ast.IntegerLiteral{value: 1},
                    right: %Ast.IntegerLiteral{value: 1}
+                 }
+               }
+             }
+           ] = program.statements
+  end
+
+  @tag input: ~M|{};|
+  test "empty hash literal", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.HashLiteral{
+                 pairs: %{}
+               }
+             }
+           ] = program.statements
+  end
+
+  @tag input: ~M|{"one": 1, "two": 2, "three": 3};|
+  test "hash literal", %{parser: parser, program: program} do
+    assert_parse_errors(parser)
+
+    assert 1 == length(program.statements)
+
+    assert [
+             %Ast.ExpressionStatement{
+               expression: %Ast.HashLiteral{
+                 pairs: %{
+                   %Ast.StringLiteral{value: "one", token: %Token{literal: "one", type: "STRING"}} =>
+                     %Ast.IntegerLiteral{value: 1},
+                   %Ast.StringLiteral{value: "two", token: %Token{literal: "two", type: "STRING"}} =>
+                     %Ast.IntegerLiteral{value: 2},
+                   %Ast.StringLiteral{
+                     value: "three",
+                     token: %Token{literal: "three", type: "STRING"}
+                   } => %Ast.IntegerLiteral{value: 3}
                  }
                }
              }

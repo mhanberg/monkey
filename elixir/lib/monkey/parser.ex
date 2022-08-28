@@ -70,7 +70,8 @@ defmodule Monkey.Parser do
         @token_if => &parse_if_expression/1,
         @token_function => &parse_function_literal/1,
         @token_string => &parse_string_literal/1,
-        @token_lbracket => &parse_array_literal/1
+        @token_lbracket => &parse_array_literal/1,
+        @token_lbrace => &parse_hash_literal/1
       },
       infix_parse_functions: %{
         @token_eq => &parse_infix_expression/2,
@@ -544,7 +545,10 @@ defmodule Monkey.Parser do
   end
 
   defp parse_string_literal(%__MODULE__{} = parser) do
-    {parser, %Ast.StringLiteral{token: parser.current_token, value: parser.current_token.literal}}
+    trace "string" do
+      {parser,
+       %Ast.StringLiteral{token: parser.current_token, value: parser.current_token.literal}}
+    end
   end
 
   defp parse_array_literal(%__MODULE__{} = parser) do
@@ -584,17 +588,65 @@ defmodule Monkey.Parser do
     end
   end
 
+  defp parse_hash_literal(%__MODULE__{} = parser) do
+    trace "hash literal" do
+      hash = %Ast.HashLiteral{token: parser.current_token}
+      pairs = %{}
+
+      {parser, pairs} =
+        while(
+          {parser, pairs},
+          fn {parser, _} -> not is_peek_token?(parser, @token_rbrace) end,
+          fn {parser, pairs} ->
+            parser = next_token(parser)
+            {parser, key} = parse_expression(parser, @lowest)
+
+            case expect_peek(parser, @token_colon) do
+              {:ok, parser} ->
+                parser = next_token(parser)
+                {parser, value} = parse_expression(parser, @lowest)
+                pairs = Map.put(pairs, key, value)
+
+                case {!is_peek_token?(parser, @token_rbrace), expect_peek(parser, @token_comma)} do
+                  {true, {:ok, parser}} ->
+                    {parser, pairs}
+
+                  {false, {:error, _parser}} ->
+                    {parser, pairs}
+
+                  {_, {_, parser}} ->
+                    {parser, nil}
+                end
+
+              {:error, parser} ->
+                {parser, nil}
+            end
+          end
+        )
+
+      case expect_peek(parser, @token_rbrace) do
+        {:ok, parser} ->
+          {parser, %{hash | pairs: pairs}}
+
+        {:error, parser} ->
+          {parser, nil}
+      end
+    end
+  end
+
   defp parse_index_expression(%__MODULE__{} = parser, expression) do
-    exp = %Ast.IndexExpression{token: parser.current_token, left: expression}
-    parser = next_token(parser)
-    {parser, index} = parse_expression(parser, @lowest)
+    trace "index expression" do
+      exp = %Ast.IndexExpression{token: parser.current_token, left: expression}
+      parser = next_token(parser)
+      {parser, index} = parse_expression(parser, @lowest)
 
-    case expect_peek(parser, @token_rbracket) do
-      {:ok, parser} ->
-        {parser, %{exp | index: index}}
+      case expect_peek(parser, @token_rbracket) do
+        {:ok, parser} ->
+          {parser, %{exp | index: index}}
 
-      :error ->
-        {parser, nil}
+        :error ->
+          {parser, nil}
+      end
     end
   end
 
