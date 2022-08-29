@@ -5,9 +5,12 @@ on:
     branches: main
 
 jobs:
-  tests:
+  zig-tests:
     runs-on: ubuntu-latest
-    name: Tests
+    name: Zig Tests
+    defaults:
+      run:
+        working-directory: zig
 
     steps:
       - uses: actions/checkout@v2
@@ -17,3 +20,20 @@ jobs:
 
       - name: Run Tests
         run: zig test src/lexer.zig
+
+  elixir-tests:
+    runs-on: ubuntu-latest
+    name: Elixir Tests
+    defaults:
+      run:
+        working-directory: elixir
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "25.0"
+          elixir-version: "1.13.4"
+
+      - name: Run Tests
+        run: mix test
