@@ -26,6 +26,9 @@ defmodule Monkey.Evaluator do
       %Ast.Identifier{} = identifier ->
         eval_identifier(identifier, env)
 
+      %Ast.HashLiteral{} = hash ->
+        eval_hash_literal(hash, env)
+
       %Ast.ArrayLiteral{values: values} ->
         {elements, env} = eval_expressions(values, env)
 
@@ -199,6 +202,9 @@ defmodule Monkey.Evaluator do
       Obj.type(left) == Object.types(:array_obj) && Obj.type(index) == Object.types(:integer_obj) ->
         eval_array_index_expression(left, index)
 
+      Obj.type(left) == Object.types(:hash_obj) ->
+        eval_hash_index_expression(left, index)
+
       true ->
         %Object.Error{
           message: "index operator not supported for: #{Obj.type(left)}}"
@@ -266,6 +272,34 @@ defmodule Monkey.Evaluator do
     end
   end
 
+  def eval_hash_literal(hash, env) do
+    pairs = %{}
+    error = nil
+
+    {pairs, error} =
+      for {key_node, value_node} <- hash.pairs, reduce: {pairs, error} do
+        {pairs, nil} ->
+          with {key, _env} <- run(key_node, env),
+               {_key, false} <- {key, error?(key)},
+               {value, _env} <- run(value_node, env),
+               {_, false} <- {value, error?(value)} do
+            {Map.put(pairs, Obj.hash_key(key), %Object.HashPair{key: key, value: value}), nil}
+          else
+            {error, true} ->
+              {nil, error}
+          end
+
+        acc ->
+          acc
+      end
+
+    if error do
+      {error, env}
+    else
+      {%Object.Hash{pairs: pairs}, env}
+    end
+  end
+
   defp eval_array_index_expression(left, index) do
     elements = left.elements
     idx = index.value
@@ -275,6 +309,18 @@ defmodule Monkey.Evaluator do
       @null_object
     else
       Enum.at(elements, index.value)
+    end
+  end
+
+  def eval_hash_index_expression(left, index) do
+    if Object.Hashable.hash_key(index) do
+      if pair = left.pairs[Obj.hash_key(index)] do
+        pair.value
+      else
+        @null_object
+      end
+    else
+      %Object.Error{message: "ususable as hash key: #{Object.Obj.type(index)}"}
     end
   end
 

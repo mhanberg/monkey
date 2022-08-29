@@ -4,6 +4,7 @@ defmodule Monkey.EvaluatorTest do
   alias Monkey.Evaluator
   alias Monkey.Lexer
   alias Monkey.Object
+  alias Monkey.Object.Obj
   alias Monkey.Parser
   alias Monkey.Environment
 
@@ -302,6 +303,61 @@ defmodule Monkey.EvaluatorTest do
     """
 
     test_integer_object(test_eval(input), 4)
+  end
+
+  test "hash literals" do
+    input = ~M"""
+    let two = "two";
+    {
+      "one": 10 - 9,
+      two: 1 + 1,
+      "thr" + "ee": 6 / 2,
+      4: 4,
+      true: 5,
+      false: 6
+    }
+    """
+
+    evaluated = test_eval(input)
+
+    expected_pairs = %{
+      Obj.hash_key(%Object.String{value: "one"}) => 1,
+      Obj.hash_key(%Object.String{value: "two"}) => 2,
+      Obj.hash_key(%Object.String{value: "three"}) => 3,
+      Obj.hash_key(%Object.Integer{value: 4}) => 4,
+      Obj.hash_key(%Object.Boolean{value: true}) => 5,
+      Obj.hash_key(%Object.Boolean{value: false}) => 6
+    }
+
+    assert %Object.Hash{} = evaluated
+
+    for {expected_hash_key, expected_value} <- expected_pairs do
+      assert Map.has_key?(evaluated.pairs, expected_hash_key)
+
+      test_integer_object(evaluated.pairs[expected_hash_key].value, expected_value)
+    end
+  end
+
+  test "hash index expressions" do
+    tests = [
+      {~M|{"foo": 5}["foo"]|, 5},
+      {~M|{"foo": 5}["bar"]|, nil},
+      {~M|let key = "foo"; {"foo": 5}[key]|, 5},
+      {~M|{}["foo"]|, nil},
+      {~M"{5: 5}[5]", 5},
+      {~M"{true: 5}[true]", 5},
+      {~M"{false: 5}[false]", 5}
+    ]
+
+    for {input, expected} <- tests do
+      evaluated = test_eval(input)
+
+      if is_integer(expected) do
+        test_integer_object(evaluated, expected)
+      else
+        test_null_object(evaluated)
+      end
+    end
   end
 
   defp test_integer_object(evaluated, expected) do
