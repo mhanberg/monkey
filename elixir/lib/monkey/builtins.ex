@@ -6,6 +6,9 @@ defmodule Monkey.Builtins do
     %{
       "len" => %Object.BuiltinFunction{
         func: fn args -> ensure_arg_count(&len/1, args, 1) end
+      },
+      "puts" => %Object.BuiltinFunction{
+        func: fn args -> puts(args) end
       }
     }[key]
   end
@@ -28,5 +31,13 @@ defmodule Monkey.Builtins do
 
   defp len(other) do
     %Object.Error{message: "argument to `len` not supported, got #{Obj.type(other)}"}
+  end
+
+  defp puts(args) do
+    for arg <- args do
+      IO.puts(Obj.inspect(arg))
+    end
+
+    %Object.Null{}
   end
 end
